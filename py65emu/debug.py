@@ -55,12 +55,16 @@ class Disassembly:
             case "iy":
                 return prefix + f"(${self.lo:0>2x}), Y "
             case "rel":
-                addr = self.pc + 1
+                addr = (
+                    (self.pc + 1) + self.op.cpu.fromTwosCom(self.lo)
+                ) & 0xFFFF
+                """
                 if self.lo & 0x80:
-                    addr -= (self.lo ^ 0xff) + 1
+                    addr = (((self.pc + 1) - self.lo ^ 0xff) + 1) & 0xFFFF
                 else:
-                    addr += self.lo
-                return prefix + f"${self.lo:0>2x} [{addr:0>4x}] "
+                    addr = ((self.pc + 1) + self.lo) & 0xFFFF
+                """
+                return prefix + f"${self.lo:0>2x} [${addr:0>4x}] "
 
     def __repr__(self) -> str:
         return f"${self.pc:0>4x} {self.op.opcode:0>2x} {self.lo:0>2x} "\

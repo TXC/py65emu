@@ -43,9 +43,9 @@ class Operation:
         dasm = Disassembly(self, *self.get_memory())
         op_f(a_f())
 
-        print(f"{dasm!r: <35} {self.cpu.r!r: >44}")
-
         self.cpu.cc += self.cycles
+
+        print(f"{dasm!r: <36} {self.cpu.r!r: >44} C: {self.cpu.cc:d}")
 
     def get_memory(self, addr: int | None = None) -> tuple[int, int, int]:
         if addr is None:

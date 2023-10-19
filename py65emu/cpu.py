@@ -239,7 +239,7 @@ class CPU:
 
     def nextByte(self) -> int:
         v = self.mmu.read(self.r.pc)
-        self.r.pc += 1
+        self.r.pc = (self.r.pc + 1) & 0xFFFF
         return v
 
     def nextWord(self) -> int:
@@ -269,7 +269,22 @@ class CPU:
     def toBCD(self, v) -> int:
         return int(math.floor(v / 10)) * 16 + (v % 10)
 
-    def fromTwosCom(self, v) -> int:
+    def signedHex(self, v: int, bits: int = 8) -> int:
+        """Converts unsigned int value to signed int value
+
+        :param int v: The unsigned int value
+        :param int bits: Number of bits the value has. (Default 8)
+            * 8 bits   = byte
+            * 16 bits  = word
+            * 32 bits  = long
+            * 64 bits  = long long
+            * 128 bits = double
+        """
+        if v >= (1 << (bits - 1)):
+            v -= (1 << bits)
+        return v
+
+    def fromTwosCom(self, v: int) -> int:
         return (v & 0x7F) - (v & 0x80)
 
     interrupts = {
@@ -297,7 +312,7 @@ class CPU:
             self.stackPush(self.r.p)
 
         self.r.setFlag("I")
-        self.r.pc = self.interruptAddress(type)
+        self.r.pc = self.interruptAddress(irq_type)
 
     def process_nmi(self) -> None:
         self.r.pc -= 1
@@ -402,24 +417,16 @@ class CPU:
 
     """Instructions."""
 
-    def ADC(self, v2) -> None:
+    def ADC(self, v2: int) -> None:
         v1 = self.r.a
 
         if self.r.getFlag("D"):  # decimal mode
-            """
             d1 = self.fromBCD(v1)
             d2 = self.fromBCD(v2)
             r = d1 + d2 + self.r.getFlag("C")
             self.r.a = self.toBCD(r % 100)
-            """
-            d1 = (v1 & 0x0F) + (v2 & 0x0F) + self.r.getFlag("C")
-            d2 = (v1 >> 4) + (v2 >> 4) + (1 if d1 > 9 else 0)
 
-            r = d1 % 10 | (d2 % 10 << 4)
-            self.r.a = r & 0xFF
-
-            # self.r.setFlag("C", r > 99)
-            self.r.setFlag("C", d1 > 9)
+            self.r.setFlag("C", r > 99)
         else:
             r = v1 + v2 + self.r.getFlag("C")
             self.r.a = r & 0xFF
@@ -427,14 +434,13 @@ class CPU:
             self.r.setFlag("C", r > 0xFF)
 
         self.r.ZN(self.r.a)
-        # self.r.ZN(r)
         self.r.setFlag("V", ((~(v1 ^ v2)) & (v1 ^ r) & 0x80))
 
-    def AND(self, v) -> None:
+    def AND(self, v: int) -> None:
         self.r.a = (self.r.a & v) & 0xFF
         self.r.ZN(self.r.a)
 
-    def ASL(self, a) -> None:
+    def ASL(self, a: int) -> None:
         if a == "a":
             v = self.r.a << 1
             self.r.a = v & 0xFF
@@ -445,12 +451,12 @@ class CPU:
         self.r.setFlag("C", v > 0xFF)
         self.r.ZN(v & 0xFF)
 
-    def BIT(self, v) -> None:
+    def BIT(self, v: int) -> None:
         self.r.setFlag("Z", self.r.a & v == 0)
         self.r.setFlag("N", v & 0x80)
         self.r.setFlag("V", v & 0x40)
 
-    def B(self, v) -> None:
+    def B(self, v: tuple[str, bool]) -> None:
         """
         v is a tuple of (flag, boolean).
         For instance, BCC (Branch Carry Clear) will call B(('C', False)).
@@ -467,22 +473,22 @@ class CPU:
     def BRK(self, _: int) -> None:
         self.breakOperation("BRK")
 
-    def CP(self, r, v) -> None:
+    def CP(self, r: int, v: int) -> None:
         o = (r - v) & 0xFF
         self.r.setFlag("Z", o == 0)
         self.r.setFlag("C", v <= r)
         self.r.setFlag("N", o & 0x80)
 
-    def CMP(self, v) -> None:
+    def CMP(self, v: int) -> None:
         self.CP(self.r.a, v)
 
-    def CPX(self, v) -> None:
+    def CPX(self, v: int) -> None:
         self.CP(self.r.x, v)
 
-    def CPY(self, v) -> None:
+    def CPY(self, v: int) -> None:
         self.CP(self.r.y, v)
 
-    def DEC(self, a) -> None:
+    def DEC(self, a: int) -> None:
         v = (self.mmu.read(a) - 1) & 0xFF
         self.mmu.write(a, v)
         self.r.ZN(v)
@@ -495,21 +501,21 @@ class CPU:
         self.r.y = (self.r.y - 1) & 0xFF
         self.r.ZN(self.r.y)
 
-    def EOR(self, v) -> None:
+    def EOR(self, v: int) -> None:
         self.r.a = self.r.a ^ v
         self.r.ZN(self.r.a)
 
     """Flag Instructions."""
 
-    def SE(self, v) -> None:
+    def SE(self, v: str) -> None:
         """Set the flag to True."""
         self.r.setFlag(v)
 
-    def CL(self, v) -> None:
+    def CL(self, v: str) -> None:
         """Clear the flag to False."""
         self.r.clearFlag(v)
 
-    def INC(self, a) -> None:
+    def INC(self, a: int) -> None:
         v = (self.mmu.read(a) + 1) & 0xFF
         self.mmu.write(a, v)
         self.r.ZN(v)
@@ -522,26 +528,26 @@ class CPU:
         self.r.y = (self.r.y + 1) & 0xFF
         self.r.ZN(self.r.y)
 
-    def JMP(self, a) -> None:
+    def JMP(self, a: int) -> None:
         self.r.pc = a
 
-    def JSR(self, a) -> None:
+    def JSR(self, a: int) -> None:
         self.stackPushWord(self.r.pc - 1)
         self.r.pc = a
 
-    def LDA(self, v) -> None:
+    def LDA(self, v: int) -> None:
         self.r.a = v
         self.r.ZN(self.r.a)
 
-    def LDX(self, v) -> None:
+    def LDX(self, v: int) -> None:
         self.r.x = v
         self.r.ZN(self.r.x)
 
-    def LDY(self, v) -> None:
+    def LDY(self, v: int) -> None:
         self.r.y = v
         self.r.ZN(self.r.y)
 
-    def LSR(self, a) -> None:
+    def LSR(self, a: int) -> None:
         if a == "a":
             self.r.setFlag("C", self.r.a & 0x01)
             self.r.a = v = self.r.a >> 1
@@ -556,7 +562,7 @@ class CPU:
     def NOP(self, _) -> None:
         pass
 
-    def ORA(self, v) -> None:
+    def ORA(self, v: int) -> None:
         self.r.a = self.r.a | v
         self.r.ZN(self.r.a)
 
@@ -583,7 +589,7 @@ class CPU:
             elif r == "p":
                 self.r.p = self.r.p | 0b00100000
 
-    def ROL(self, a) -> None:
+    def ROL(self, a: int) -> None:
         if a == "a":
             v_old = self.r.a
             self.r.a = v_new = ((v_old << 1) + self.r.getFlag("C")) & 0xFF
@@ -595,7 +601,7 @@ class CPU:
         self.r.setFlag("C", v_old & 0x80)
         self.r.ZN(v_new)
 
-    def ROR(self, a) -> None:
+    def ROR(self, a: int) -> None:
         if a == "a":
             v_old = self.r.a
             self.r.a = v_new = (
@@ -616,36 +622,36 @@ class CPU:
     def RTS(self, _) -> None:
         self.r.pc = (self.stackPopWord() + 1) & 0xFFFF
 
-    def SBC(self, v2) -> None:
+    def SBC(self, v2: int) -> None:
         v1 = self.r.a
         if self.r.getFlag("D"):
             d1 = self.fromBCD(v1)
             d2 = self.fromBCD(v2)
             r = d1 - d2 - (not self.r.getFlag("C"))
             self.r.a = self.toBCD(r % 100)
-
-            self.r.setFlag("C", r > 99)
         else:
+            """
             r = v1 + (v2 ^ 0xFF) + self.r.getFlag("C")
 
             self.r.a = r & 0xFF
+            """
+            r = v1 - v2 - (not self.r.getFlag('C'))
+            self.r.a = r & 0xff
 
-            self.r.setFlag("C", r & 0xFF00)
-
-        self.r.ZN(self.r.a)
-        # self.r.ZN(r)
+        self.r.setFlag("C", r >= 0)
         self.r.setFlag("V", ((v1 ^ v2) & (v1 ^ r) & 0x80))
+        self.r.ZN(self.r.a)
 
-    def STA(self, a) -> None:
+    def STA(self, a: int) -> None:
         self.mmu.write(a, self.r.a)
 
-    def STX(self, a) -> None:
+    def STX(self, a: int) -> None:
         self.mmu.write(a, self.r.x)
 
-    def STY(self, a) -> None:
+    def STY(self, a: int) -> None:
         self.mmu.write(a, self.r.y)
 
-    def T(self, a) -> None:
+    def T(self, a: tuple[str, str]) -> None:
         """
         Transfer registers
         a is a tuple with (source, destination) so TAX
@@ -674,17 +680,17 @@ class CPU:
     line.
     """
 
-    def AAC(self, v) -> None:  # ANC
+    def AAC(self, v: int) -> None:  # ANC
         self.AND(v)
         self.r.setFlag("C", self.r.getFlag("N"))
 
-    def AAX(self, a) -> None:  # SAX, AXS
+    def AAX(self, a: int) -> None:  # SAX, AXS
         r = self.r.a & self.r.x
         self.mmu.write(a, r)
         # There is conflicting information whether this effects P.
         # self.r.ZN(r)
 
-    def ARR(self, v) -> None:
+    def ARR(self, v: int) -> None:
         self.AND(v)
         self.ROR("a")
         self.r.setFlag("C", self.r.a & 0x40)
@@ -694,11 +700,11 @@ class CPU:
         self.AND(v)
         self.LSR("a")
 
-    def ATX(self, v) -> None:  # LXA, OAL
+    def ATX(self, v: int) -> None:  # LXA, OAL
         self.AND(v)
         self.T(("a", "x"))
 
-    def AXA(self, a) -> None:  # SHA
+    def AXA(self, a: int) -> None:  # SHA
         """
         There are a few illegal opcodes which and the high
         bit of the address with registers and write the values
@@ -719,49 +725,49 @@ class CPU:
         v = self.r.a & self.r.x & (high + 1)
         self.mmu.write(a, v)
 
-    def AXS(self, v) -> None:  # SBX, SAX
+    def AXS(self, v: int) -> None:  # SBX, SAX
         o = self.r.a & self.r.x
         self.r.x = (o - v) & 0xFF
 
         self.r.setFlag("C", v <= o)
         self.r.ZN(self.r.x)
 
-    def DCP(self, a) -> None:  # DCM
+    def DCP(self, a: int) -> None:  # DCM
         self.DEC(a)
         self.CMP(self.mmu.read(a))
 
-    def ISC(self, a) -> None:  # ISB, INS
+    def ISC(self, a: int) -> None:  # ISB, INS
         self.INC(a)
         self.SBC(self.mmu.read(a))
 
     def KIL(self, _) -> None:  # JAM, HLT
         self.running = False
 
-    def LAR(self, v) -> None:  # LAE, LAS
+    def LAR(self, v: int) -> None:  # LAE, LAS
         self.r.a = self.r.x = self.r.s = self.r.s & v
         self.r.ZN(self.r.a)
 
-    def LAX(self, v) -> None:
+    def LAX(self, v: int) -> None:
         self.r.a = self.r.x = v
         self.r.ZN(self.r.a)
 
-    def RLA(self, a) -> None:
+    def RLA(self, a: int) -> None:
         self.ROL(a)
         self.AND(self.mmu.read(a))
 
-    def RRA(self, a) -> None:
+    def RRA(self, a: int) -> None:
         self.ROR(a)
         self.ADC(self.mmu.read(a))
 
-    def SLO(self, a) -> None:  # ASO
+    def SLO(self, a: int) -> None:  # ASO
         self.ASL(a)
         self.ORA(self.mmu.read(a))
 
-    def SRE(self, a) -> None:  # LSE
+    def SRE(self, a: int) -> None:  # LSE
         self.LSR(a)
         self.EOR(self.mmu.read(a))
 
-    def SXA(self, a) -> None:  # SHX, XAS
+    def SXA(self, a: int) -> None:  # SHX, XAS
         # See AXA
         o = (a - self.r.y) & 0xFFFF
         low = o & 0xFF
@@ -774,7 +780,7 @@ class CPU:
         v = self.r.x & (high + 1)
         self.mmu.write(a, v)
 
-    def SYA(self, a) -> None:  # SHY, SAY
+    def SYA(self, a: int) -> None:  # SHY, SAY
         # See AXA
         o = (a - self.r.x) & 0xFFFF
         low = o & 0xFF
@@ -787,7 +793,7 @@ class CPU:
         v = self.r.y & (high + 1)
         self.mmu.write(a, v)
 
-    def XAA(self, v) -> None:  # ANE
+    def XAA(self, v: int) -> None:  # ANE
         """
         Another very wonky operation.  It's fully described here:
         http://visual6502.org/wiki/index.php?title=6502_Opcode_8B_%28XAA,_ANE%29
@@ -797,7 +803,7 @@ class CPU:
         self.r.a = (self.r.a | self.magic) & self.r.x & v
         self.r.ZN(self.r.a)
 
-    def XAS(self, a) -> None:  # SHS, TAS
+    def XAS(self, a: int) -> None:  # SHS, TAS
         # First set the stack pointer's value
         self.r.s = self.r.a & self.r.x
 

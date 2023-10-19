@@ -12,7 +12,6 @@ Processor tests for `py65emu` module.
 import unittest
 
 from enum import Enum
-from parameterized import parameterized
 from py65emu.cpu import CPU, FlagBit
 from py65emu.mmu import MMU
 
@@ -64,24 +63,21 @@ class Processor(unittest.TestCase):
         :param int pc: Program counter.
         """
         print("\nINIT CPU\n")
+        pc = 0x00
+        program = []
+
         if 'program' in kwargs and kwargs['program'] is not None:
             program = kwargs['program']
-        else:
-            program = [0x00]
-
-        if 'pc' in kwargs and kwargs['pc'] is not None:
-            pc = kwargs['pc']
-        else:
-            pc = 0x00
 
         if 'condition' in kwargs and kwargs['condition'] is not None:
             program = [kwargs['condition']] + (
                 program if isinstance(program, tuple) is False else [*program]
             )
-            c = self._cpu(program, pc)
-        else:
-            c = self._cpu(program, pc)
 
+        if 'pc' in kwargs and kwargs['pc'] is not None:
+            pc = kwargs['pc']
+
+        c = self._cpu(program, pc)
         self.assertEqual(c.r.pc, pc)
         return c
 
@@ -171,10 +167,15 @@ class InstructionADC(Processor):
                 self.assertEqual(c.r.a, data[3])
 
     def test_Accumulator_Correct_When_In_BCD_Mode(self):
+        """BCD is a bit special.
+        0x99 + 0x99 = 0x98, which equals: 99 + 99 = 198 = 98 (with carry)
+        it's hex in dec form
+        hex(99) = dec(99)
+        """
         subtests = [
-            (0x63, 0x63, False, 0x98),
-            (0x63, 0x63, True, 0x63),
-            (0x90, 0x63, False, 0x89)
+            (0x99, 0x99, False, 0x98),
+            (0x99, 0x99, True, 0x99),
+            (0x90, 0x99, False, 0x89)
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -2333,9 +2334,6 @@ class InstructionROR(Processor):
                     )
 
 
-"""HERE"""
-
-
 class InstructionRTI(Processor):
     """ RTI - Return from Interrupt
     """
@@ -2503,9 +2501,17 @@ class InstructionSBC(Processor):
                 )
 
     def test_Accumulator_Correct_When_In_BCD_Mode(self):
+        """BCD is a bit special.
+        0x99 + 0x99 = 0x98, which equals: 99 + 99 = 198 = 98 (with carry)
+        it's hex in dec form
+        hex(99) = dec(99)
+        """
         subtests = [
             [0x00, 0x99, False, 0x00],
             [0x00, 0x99, True, 0x01],
+            [0x45, 0x12, False, 0x32],
+            [0x99, 0x99, False, 0x99],
+            [0x99, 0x99, True, 0x00],
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -2568,8 +2574,8 @@ class InstructionSBC(Processor):
 
     def test_Overflow_Correct_When_In_BCD_Mode(self):
         subtests = [
-            [99, 1, False, False],
-            [99, 0, False, False],
+            [0x99, 0x01, False, False],
+            [0x99, 0x00, False, False],
             # [0, 1, False, True],
             # [1, 1, True, True],
             # [2, 1, True, False],
@@ -3346,11 +3352,6 @@ class CompareAddress(Processor):
                 c.step()
                 c.step()
 
-                self.assertEqual(c.r.a, 0x00)
-
-                c.step()
-                c.step()
-
                 self.assertEqual(c.r.getFlag(FlagBit.Z), False)
                 self.assertEqual(c.r.getFlag(FlagBit.N), True)
                 self.assertEqual(c.r.getFlag(FlagBit.C), True)
@@ -3364,7 +3365,7 @@ class CompareAddress(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                p = [data[3].value, data[1], data[0], data[2]]
+                p = [data[3].value, data[1], data[0], 0x04, data[2]]
                 c = self.create(data, program=p)
 
                 self.assertEqual(c.r.a, 0x00)
@@ -3446,46 +3447,42 @@ class CompareAddress(Processor):
 class DecrementIncrementAddress(Processor):
     """ Decrement/Increment Address Tests
     """
-    @parameterized.expand(
-        [
+    def test_Zero_Page_DEC_INC_Has_Correct_Result(self):
+        subtests = [
             [0xC6, 0xFF, 0xFE],  # DEC Zero Page
             [0xD6, 0xFF, 0xFE],  # DEC Zero Page X
             [0xE6, 0xFF, 0x00],  # INC Zero Page
             [0xF6, 0xFF, 0x00],  # INC Zero Page X
         ]
-    )
-    def test_Zero_Page_DEC_INC_Has_Correct_Result(
-        self, operation, memoryValue, expectedValue
-    ):
-        c = self._cpu(program=[operation, 0x02, memoryValue])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[data[0], 0x02, data[1]])
 
-        c.step()
+                c.step()
 
-        self.assertEqual(c.mmu.read(0x02), expectedValue)
+                self.assertEqual(c.mmu.read(0x02), data[2])
 
-    @parameterized.expand(
-        [
+    def test_Absolute_DEC_INC_Has_Correct_Result(self):
+        subtests = [
             [0xCE, 0xFF, 0xFE],  # DEC Zero Page
             [0xDE, 0xFF, 0xFE],  # DEC Zero Page X
             [0xEE, 0xFF, 0x00],  # INC Zero Page
             [0xFE, 0xFF, 0x00],  # INC Zero Page X
         ]
-    )
-    def test_Absolute_DEC_INC_Has_Correct_Result(
-        self, operation, memoryValue, expectedValue
-    ):
-        c = self._cpu([operation, 0x03, 0x00, memoryValue])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[data[0], 0x03, 0x00, data[1]])
 
-        c.step()
+                c.step()
 
-        self.assertEqual(c.mmu.read(0x03), expectedValue)
+                self.assertEqual(c.mmu.read(0x03), data[2])
 
 
 class StoreInMemoryAddress(Processor):
     """ Store In Memory Address Tests
     """
-    @parameterized.expand(
-        [
+    def test_ZeroPage_Mode_Memory_Has_Correct_Result(self):
+        subtests = [
             [0x85, RegisterMode.Accumulator],  # STA Zero Page
             [0x95, RegisterMode.Accumulator],  # STA Zero Page X
             [0x86, RegisterMode.XRegister],  # STX Zero Page
@@ -3493,58 +3490,46 @@ class StoreInMemoryAddress(Processor):
             [0x84, RegisterMode.YRegister],  # STY Zero Page
             [0x94, RegisterMode.YRegister],  # STY Zero Page X
         ]
-    )
-    def test_ZeroPage_Mode_Memory_Has_Correct_Result(self, operation, mode):
-        if mode == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif mode == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[
+                    data[1].value, 0x04, data[0], 0x00, 0x05
+                ])
 
-        c = self._cpu(program=[loadOperation, 0x04, operation, 0x00, 0x05])
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.mmu.read(0x04), 0x05)
 
-        c.step()
-        c.step()
-
-        self.assertEqual(c.mmu.read(0x04), 0x05)
-
-    @parameterized.expand(
-        [
+    def test_Absolute_Mode_Memory_Has_Correct_Result(self):
+        subtests = [
             [0x8D, 0x03, RegisterMode.Accumulator],  # STA Absolute
             [0x9D, 0x03, RegisterMode.Accumulator],  # STA Absolute X
             [0x99, 0x03, RegisterMode.Accumulator],  # STA Absolute X
             [0x8E, 0x03, RegisterMode.XRegister],  # STX Zero Page
             [0x8C, 0x03, RegisterMode.YRegister],  # STY Zero Page
         ]
-    )
-    def test_Absolute_Mode_Memory_Has_Correct_Result(
-        self, operation, valueToLoad, mode
-    ):
-        if mode == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif mode == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[
+                    data[2].value, data[1], data[0], 0x04
+                ])
 
-        c = self._cpu(program=[loadOperation, valueToLoad, operation, 0x04])
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, 0x00)
-
-        c.step()
-        c.step()
-
-        self.assertEqual(c.mmu.read(0x04), valueToLoad)
+                self.assertEqual(c.mmu.read(0x04), data[1])
 
 
 class Cycle(Processor):
     """ Cycle Tests
     """
-    @parameterized.expand(
-        [
+    def test_Cycles_Correct_After_Operations_That_Do_Not_Wrap(self):
+        """
+        Test number of cycles remaining is correct after operations and the
+        result do not wrap
+        """
+        subtests = [
             [0x69, 2],  # ADC Immediate
             [0x65, 3],  # ADC Zero Page
             [0x75, 4],  # ADC Zero Page X
@@ -3783,28 +3768,22 @@ class Cycle(Processor):
             [0xDC, 4],  # TOP Absolute X
             [0xFC, 4],  # TOP Absolute X
         ]
-    )
-    def test_Cycles_Correct_After_Operations_That_Do_Not_Wrap(
-        self, operation, numberOfCyclesUsed
-    ):
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[data[0], 0x00])
+
+                self.assertEqual(c.cc, 0)
+
+                c.step()
+
+                self.assertEqual(c.cc, data[1], f"OP: {data[0]:0>2x}")
+
+    def test_Cycles_Correct_When_In_AbsoluteX_Or_AbsoluteY_And_Wrap(self):
         """
-        Test number of cycles remaining is correct after operations and the
-        result do not wrap
+        Test number of cycles remaining is correct when in AbsoluteX or
+        AbsoluteY and the result wraps
         """
-        c = self._cpu(program=[operation, 0x00])
-
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-
-        self.assertEqual(
-            c.cc,
-            numberOfCyclesUsed,
-            f"OP: {operation:0>2x}"
-        )
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0x7D, True, 5],  # ADC Absolute X
             [0x79, False, 5],  # ADC Absolute Y
             [0x3D, True, 5],  # AND Absolute X
@@ -3839,32 +3818,26 @@ class Cycle(Processor):
             [0xDC, True, 5],  # TOP Absolute X
             [0xFC, True, 5],  # TOP Absolute X
         ]
-    )
-    def test_Cycles_Correct_When_In_AbsoluteX_Or_AbsoluteY_And_Wrap(
-        self, operation, isAbsoluteX, numberOfCyclesUsed
-    ):
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[0x06, data[0], 0xFF, 0xFF, 0x00, 0x03],
+                    condition=(0xA6 if data[1] else 0xA4)
+                )
+
+                self.assertEqual(c.cc, 0)
+
+                c.step()
+                c.step()
+
+                self.assertEqual(c.cc, data[2], f"OP: {data[0]:0>2x}")
+
+    def test_Cycles_Correct_When_In_IndirectIndexed_And_Wrap(self):
         """
-        Test number of cycles remaining is correct when in AbsoluteX or
-        AbsoluteY and the result wraps
+        Test number of cycles remaining is correct when in Indirect Indexed
+        and the result wraps
         """
-        if isAbsoluteX:
-            c = self._cpu([0xA6, 0x06, operation, 0xFF, 0xFF, 0x00, 0x03])
-        else:
-            c = self._cpu([0xA4, 0x06, operation, 0xFF, 0xFF, 0x00, 0x03])
-
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-        c.step()
-
-        self.assertEqual(
-            c.cc,
-            numberOfCyclesUsed,
-            f"OP: {operation:0>2x}"
-        )
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0x71, 6],  # ADC Indirect Y
             [0x31, 6],  # AND Indirect Y
             [0xB1, 6],  # LDA Indirect Y
@@ -3876,311 +3849,264 @@ class Cycle(Processor):
             # Illegal Instructions
             [0xB3, 6],  # LAX Indirect Y
         ]
-    )
-    def test_Cycles_Correct_When_In_IndirectIndexed_And_Wrap(
-        self, operation, numberOfCyclesUsed
-    ):
-        """
-        Test number of cycles remaining is correct when in Indirect Indexed
-        and the result wraps
-        """
-        c = self._cpu([0xA0, 0x04, operation, 0x05, 0x08, 0xFF, 0xFF, 0x03])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[0xA0, 0x04, data[0], 0x05, 0x08, 0xFF, 0xFF, 0x03]
+                )
 
-        self.assertEqual(c.cc, 0)
+                self.assertEqual(c.cc, 0)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(
-            c.cc,
-            numberOfCyclesUsed,
-            f"OP: {operation:0>2x}"
-        )
+                self.assertEqual(c.cc, data[1], f"OP: {data[0]:0>2x}")
 
-    @parameterized.expand(
-        [
-            [0x90, 2, True],  # BCC
-            [0x90, 3, False],  # BCC
-            [0xB0, 2, False],  # BCS
-            [0xB0, 3, True],  # BCS
-        ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Carry(
-        self, operation, numberOfCyclesUsed, isCarrySet
-    ):
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Carry(self):
         """
         Test number of cycles remaining is correct when Relative and
         Branch On Carry, and result do not wrap
         """
-        if isCarrySet:
-            carryOperation = 0x38
-        else:
-            carryOperation = 0x18
-
-        c = self._cpu(program=[carryOperation, operation, 0x00])
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-        c.step()
-
-        self.assertEqual(c.cc, numberOfCyclesUsed)
-
-    @parameterized.expand(
-        [
-            [0x90, 4, False, True],  # BCC
-            [0x90, 4, False, False],  # BCC
-            [0xB0, 4, True, True],  # BCC
-            [0xB0, 4, True, False],  # BCC
+        subtests = [
+            [0x90, 2, 0x38],  # BCC
+            [0x90, 3, 0x18],  # BCC
+            [0xB0, 2, 0x18],  # BCS
+            [0xB0, 3, 0x38],  # BCS
         ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Carry_And_Wrap(
-        self, operation, numberOfCyclesUsed, isCarrySet, wrapRight
-    ):
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[data[2], data[0], 0x00]
+                )
+                self.assertEqual(c.cc, 0)
+
+                c.step()
+                c.step()
+
+                self.assertEqual(c.cc, data[1])
+
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Carry_And_Wrap(self):
         """
         Test number of cycles remaining is correct when Relative and
         Branch On Carry, and result wrap
         """
-        if isCarrySet:
-            carryOperation = 0x38
-        else:
-            carryOperation = 0x18
+        subtests = [
+            [0x90, 4, 0x18, True],  # BCC
+            [0x90, 4, 0x18, False],  # BCC
+            [0xB0, 4, 0x38, True],  # BCC
+            [0xB0, 4, 0x38, False],  # BCC
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                if data[3]:
+                    initialAddress = 0xFFF0
+                    amountToMove = 0x0F
+                else:
+                    initialAddress = 0x00
+                    amountToMove = 0x84
 
-        if wrapRight:
-            initialAddress = 0xFFF0
-            amountToMove = 0x0F
-        else:
-            initialAddress = 0x00
-            amountToMove = 0x84
+                c = self.create(
+                    program=[data[2], data[0], amountToMove, 0x00],
+                    pc=initialAddress
+                )
 
-        c = self._cpu(
-            program=[carryOperation, operation, amountToMove, 0x00],
-            pc=initialAddress
-        )
+                self.assertEqual(c.cc, 0)
 
-        self.assertEqual(c.cc, 0)
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                self.assertEqual(c.cc, data[1])
 
-        self.assertEqual(c.cc, numberOfCyclesUsed)
-
-    @parameterized.expand(
-        [
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Zero(self):
+        """
+        Test number of cycles remaining is correct when Relative and
+        Branch On Zerp, and result do not wrap
+        """
+        subtests = [
             [0xF0, 3, True],  # BEQ
             [0xF0, 2, False],  # BEQ
             [0xD0, 3, False],  # BNE
             [0xD0, 2, True],  # BNE
         ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Zero(
-        self, operation, numberOfCyclesUsed, isZeroSet
-    ):
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[0xA9, (0x00 if data[2] else 0x01), data[0], 0x00]
+                )
+
+                self.assertEqual(c.cc, 0)
+
+                c.step()
+                c.step()
+
+                self.assertEqual(c.cc, data[1])
+
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Zero_And_Wrap(self):
         """
         Test number of cycles remaining is correct when Relative and
-        Branch On Zerp, and result do not wrap
+        Branch On Zero, and result wrap
         """
-        if isZeroSet:
-            zeroOperation = 0x00
-        else:
-            zeroOperation = 0x01
-
-        c = self._cpu(program=[0xA9, zeroOperation, operation, 0x00])
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-        c.step()
-
-        self.assertEqual(c.cc, numberOfCyclesUsed)
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0xF0, 4, True, True],  # BEQ
             [0xF0, 4, True, False],  # BEQ
             [0xD0, 4, False, True],  # BNE
             [0xD0, 4, False, False],  # BNE
         ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Zero_And_Wrap(
-        self, operation, numberOfCyclesUsed, isZeroSet, wrapRight
-    ):
+        for data in subtests:
+            with self.subTest(data=data):
+                if data[3]:
+                    initialAddress = 0xFFF0
+                    amountToMove = 0x0D
+                else:
+                    initialAddress = 0x00
+                    amountToMove = 0x84
+
+                c = self.create(
+                    program=[
+                        0xA9, (0x00 if data[2] else 0x01),
+                        data[0], amountToMove, 0x00
+                    ],
+                    pc=initialAddress
+                )
+
+                self.assertEqual(c.cc, 0)
+
+                c.step()
+                c.step()
+
+                self.assertEqual(c.cc, data[1])
+
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Negative(self):
         """
         Test number of cycles remaining is correct when Relative and
-        Branch On Zero, and result wrap
+        Branch On Negative, and result do not wrap
         """
-        if isZeroSet:
-            newAccumulatorValue = 0x00
-        else:
-            newAccumulatorValue = 0x01
-
-        if wrapRight:
-            initialAddress = 0xFFF0
-            amountToMove = 0x0D
-        else:
-            initialAddress = 0x00
-            amountToMove = 0x84
-
-        c = self._cpu(
-            program=[0xA9, newAccumulatorValue, operation, amountToMove, 0x00],
-            pc=initialAddress,
-        )
-
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-        c.step()
-
-        self.assertEqual(c.cc, numberOfCyclesUsed)
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0x30, 3, True],  # BEQ
             [0x30, 2, False],  # BEQ
             [0x10, 3, False],  # BNE
             [0x10, 2, True],  # BNE
         ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Negative(
-        self, operation, numberOfCyclesUsed, isNegativeSet
-    ):
-        """
-        Test number of cycles remaining is correct when Relative and
-        Branch On Negative, and result do not wrap
-        """
-        if isNegativeSet:
-            negativeOperation = 0x80
-        else:
-            negativeOperation = 0x79
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[
+                    0xA9, (0x80 if data[2] else 0x79), data[0], 0x00
+                ])
 
-        c = self._cpu(program=[0xA9, negativeOperation, operation, 0x00])
-        self.assertEqual(c.cc, 0)
+                self.assertEqual(c.cc, 0)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.cc, numberOfCyclesUsed)
+                self.assertEqual(c.cc, data[1])
 
-    @parameterized.expand(
-        [
-            [0x30, 4, True, True],  # BEQ
-            [0x30, 4, True, False],  # BEQ
-            [0x10, 4, False, True],  # BNE
-            [0x10, 4, False, False],  # BNE
-        ]
-    )
     def test_Cycles_Correct_When_Relative_And_Branch_On_Negative_And_Wrap(
-        self, operation, numberOfCyclesUsed, isNegativeSet, wrapRight
+        self
     ):
         """
         Test number of cycles remaining is correct when Relative and
         Branch On Negative, and result wrap
         """
-        if isNegativeSet:
-            newAccumulatorValue = 0x80
-        else:
-            newAccumulatorValue = 0x79
+        subtests = [
+            [0x30, 4, True, True],  # BEQ
+            [0x30, 4, True, False],  # BEQ
+            [0x10, 4, False, True],  # BNE
+            [0x10, 4, False, False],  # BNE
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                if data[3]:
+                    initialAddress = 0xFFF0
+                    amountToMove = 0x0D
+                else:
+                    initialAddress = 0x00
+                    amountToMove = 0x84
 
-        if wrapRight:
-            initialAddress = 0xFFF0
-            amountToMove = 0x0D
-        else:
-            initialAddress = 0x00
-            amountToMove = 0x84
+                c = self.create(
+                    program=[
+                        0xA9, (0x80 if data[2] else 0x79), data[0],
+                        amountToMove, 0x00
+                    ],
+                    pc=initialAddress
+                )
 
-        c = self._cpu(
-            program=[0xA9, newAccumulatorValue, operation, amountToMove, 0x00],
-            pc=initialAddress,
-        )
+                c.step()
+                c.step()
 
-        self.assertEqual(c.cc, 0)
+                self.assertEqual(c.cc, data[1])
 
-        c.step()
-        c.step()
-
-        self.assertEqual(c.cc, numberOfCyclesUsed)
-
-    @parameterized.expand(
-        [
+    def test_Cycles_Correct_When_Relative_And_Branch_On_Overflow(self):
+        """
+        Test number of cycles remaining is correct when Relative and
+        Branch On Overflow, and result do not wrap
+        """
+        subtests = [
             [0x50, 3, False],  # BVC
             [0x50, 2, True],  # BVC
             [0x70, 3, True],  # BVS
             [0x70, 2, False],  # BVS
         ]
-    )
-    def test_Cycles_Correct_When_Relative_And_Branch_On_Overflow(
-        self, operation, numberOfCyclesUsed, isOverflowSet
-    ):
-        """
-        Test number of cycles remaining is correct when Relative and
-        Branch On Overflow, and result do not wrap
-        """
-        if isOverflowSet:
-            overflowOperation = 0x7F
-        else:
-            overflowOperation = 0x01
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[
+                    0xA9, 0x01, 0x69, (0x7F if data[2] else 0x01),
+                    data[0], 0x00
+                ])
 
-        c = self._cpu([0xA9, 0x01, 0x69, overflowOperation, operation, 0x00])
-        self.assertEqual(c.cc, 0)
+                self.assertEqual(c.cc, 0)
 
-        c.step()
-        c.step()
-        c.step()
+                c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.cc, numberOfCyclesUsed)
+                self.assertEqual(c.cc, data[1])
 
-    @parameterized.expand(
-        [
-            [0x50, 4, False, True],  # BVC
-            [0x50, 4, False, False],  # BVC
-            [0x70, 4, True, True],  # BVS
-            [0x70, 4, True, False],  # BVS
-        ]
-    )
     def test_Cycles_Correct_When_Relative_And_Branch_On_Overflow_And_Wrap(
-        self, operation, numberOfCyclesUsed, isOverflowSet, wrapRight
+        self
     ):
         """
         Test number of cycles remaining is correct when Relative and
         Branch On Overflow, and result wrap
         """
-        if isOverflowSet:
-            newAccumulatorValue = 0x7F
-        else:
-            newAccumulatorValue = 0x00
+        subtests = [
+            [0x50, 4, False, True],  # BVC
+            [0x50, 4, False, False],  # BVC
+            [0x70, 4, True, True],  # BVS
+            [0x70, 4, True, False],  # BVS
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                if data[3]:
+                    initialAddress = 0xFFF0
+                    amountToMove = 0x0B
+                else:
+                    initialAddress = 0x00
+                    amountToMove = 0x86
 
-        if wrapRight:
-            initialAddress = 0xFFF0
-            amountToMove = 0x0B
-        else:
-            initialAddress = 0x00
-            amountToMove = 0x86
+                p = [
+                    0xA9, (0x7F if data[2] else 0x00), 0x69,
+                    0x01, data[0], amountToMove, 0x00
+                ]
+                c = self.create(program=p, pc=initialAddress)
+                self.assertEqual(c.cc, 0)
 
-        c = self._cpu(
-            program=[
-                0xA9,
-                newAccumulatorValue,
-                0x69,
-                0x01,
-                operation,
-                amountToMove,
-                0x00,
-            ],
-            pc=initialAddress,
-        )
+                c.step()
+                c.step()
+                c.step()
+                print(
+                    f'${initialAddress:0>4x}',
+                    f'${c.r.pc:0>4x}',
+                    [f'{i:0>2x}' for i in p]
+                )
 
-        self.assertEqual(c.cc, 0)
-
-        c.step()
-        c.step()
-        c.step()
-
-        self.assertEqual(c.cc, numberOfCyclesUsed)
+                self.assertEqual(c.cc, data[1])
 
 
 class ProgramCounter(Processor):
     """ Program Counter Tests
     """
-    @parameterized.expand(
-        [
+    def test_Program_Counter_Correct(self):
+        subtests = [
             [0x69, 2],  # ADC Immediate
             [0x65, 2],  # ADC Zero Page
             [0x75, 2],  # ADC Zero Page X
@@ -4319,117 +4245,99 @@ class ProgramCounter(Processor):
             [0x9A, 1],  # TXS Implied
             [0x98, 1],  # TYA Implied
         ]
-    )
-    def test_Program_Counter_Correct(self, operation, expectedProgramCounter):
-        c = self._cpu(program=[operation, 0x00])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(program=[data[0], 0x00])
 
-        self.assertEqual(c.r.pc, 0)
-        c.step()
-        self.assertEqual(
-            c.r.pc,
-            expectedProgramCounter,
-            f"OP: {operation:0>2x}"
-        )
+                self.assertEqual(c.r.pc, 0)
 
-    @parameterized.expand(
-        [
+                c.step()
+
+                self.assertEqual(c.r.pc, data[1], f"OP: {data[0]:0>2x}")
+
+    def test_Branch_On_Carry_Program_Counter_Correct_When_NoBranch_Occurs(
+        self
+    ):
+        subtests = [
             [0x90, True, 2],  # BCC
             [0xB0, False, 2],  # BCS
         ]
-    )
-    def test_Branch_On_Carry_Program_Counter_Correct_When_NoBranch_Occurs(
-        self, operation, carrySet, expectedOutput
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[(0x38 if data[1] else 0x18), data[0], 0x48]
+                )
+
+                c.step()
+                currentProgramCounter = c.r.pc
+
+                c.step()
+                self.assertEqual(c.r.pc, currentProgramCounter + data[2])
+
+    def test_Branch_On_Zero_Program_Counter_Correct_When_NoBranch_Occurs(
+        self
     ):
-        if carrySet:
-            program = [0x38, operation, 0x48]
-        else:
-            program = [0x18, operation, 0x48]
-
-        c = self._cpu(program=program)
-
-        c.step()
-
-        currentProgramCounter = c.r.pc
-
-        c.step()
-        self.assertEqual(c.r.pc, currentProgramCounter + expectedOutput)
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0xF0, False, 2],  # BEQ
             [0xD0, True, 2],  # BNE
         ]
-    )
-    def test_Branch_On_Zero_Program_Counter_Correct_When_NoBranch_Occurs(
-        self, operation, zeroSet, expectedOutput
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[0xA9, (0x00 if data[1] else 0x01), data[0]]
+                )
+
+                c.step()
+                currentProgramCounter = c.r.pc
+
+                c.step()
+                self.assertEqual(c.r.pc, currentProgramCounter + data[2])
+
+    def test_Branch_On_Negative_Program_Counter_Correct_When_NoBranch_Occurs(
+        self
     ):
-        if zeroSet:
-            program = [0xA9, 0x00, operation]
-        else:
-            program = [0xA9, 0x01, operation]
-
-        c = self._cpu(program=program)
-
-        c.step()
-
-        currentProgramCounter = c.r.pc
-
-        c.step()
-        self.assertEqual(c.r.pc, currentProgramCounter + expectedOutput)
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0x30, False, 2],  # BMI
             [0x10, True, 2],  # BPL
         ]
-    )
-    def test_Branch_On_Negative_Program_Counter_Correct_When_NoBranch_Occurs(
-        self, operation, negativeSet, expectedOutput
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[0xA9, (0x80 if data[1] else 0x79), data[0]]
+                )
+
+                c.step()
+                currentProgramCounter = c.r.pc
+
+                c.step()
+                self.assertEqual(c.r.pc, currentProgramCounter + data[2])
+
+    def test_Branch_On_Overflow_Program_Counter_Correct_When_NoBranch_Occurs(
+        self
     ):
-        if negativeSet:
-            program = [0xA9, 0x80, operation]
-        else:
-            program = [0xA9, 0x79, operation]
-
-        c = self._cpu(program)
-
-        c.step()
-
-        currentProgramCounter = c.r.pc
-
-        c.step()
-        self.assertEqual(c.r.pc, currentProgramCounter + expectedOutput)
-
-    @parameterized.expand(
-        [
+        subtests = [
             [0x50, True, 2],  # BVC
             [0x70, False, 2],  # BVS
         ]
-    )
-    def test_Branch_On_Overflow_Program_Counter_Correct_When_NoBranch_Occurs(
-        self, operation, overflowSet, expectedOutput
-    ):
-        if overflowSet:
-            program = [0xA9, 0x01, 0x69, 0x7F, operation, 0x00]
-        else:
-            program = [0xA9, 0x01, 0x69, 0x01, operation, 0x00]
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(
+                    program=[
+                        0xA9, 0x01, 0x69, (0x7F if data[1] else 0x01),
+                        data[0], 0x00
+                    ]
+                )
 
-        c = self._cpu(program=program)
+                c.step()
+                c.step()
+                currentProgramCounter = c.r.pc
 
-        c.step()
-        c.step()
-
-        currentProgramCounter = c.r.pc
-
-        c.step()
-        self.assertEqual(c.r.pc, currentProgramCounter + expectedOutput)
+                c.step()
+                self.assertEqual(c.r.pc, currentProgramCounter + data[2])
 
     def test_Program_Counter_Wraps_Correctly(self):
-        c = self._cpu([])
-        self.assertEqual(c.r.pc, 0)
-        c.mmu.addBlock(0xFFFF, 0x1, True, [0x38])
-        c.r.pc = 0xFFFF
-
+        c = self.create(program=[0x38], pc=0xFFFF)
+        self.assertEqual(c.r.pc, 0xFFFF)
         c.step()
         self.assertEqual(c.r.pc, 0)
 

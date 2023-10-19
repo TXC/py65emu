@@ -1,0 +1,35 @@
+[bdist_wheel]
+universal = 1
+
+[project]
+name = "py65emu"
+version = "0.1.0"
+authors = [
+    { name = "Jonas Marklén", email = "txc@txc.se" }
+]
+license = { text = "WTFPL" }
+description = "A 6502 Emulator"
+readme = "README.rst"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "requests >= 2.31.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/TXC/py65emu"
+
+[project.optional-dependencies]
+docs = ['Sphinx>=1.0', 'sphinx_rtd_theme',]

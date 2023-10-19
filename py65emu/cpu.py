@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import math
 from typing import Union
 from enum import Enum
 from py65emu.mmu import MMU
 from py65emu.operator import Operator
 from py65emu.debug import Debug
-import math
-import functools
 
 
 class FlagBit(Enum):
@@ -44,6 +43,13 @@ class FlagBit(Enum):
 class Registers:
     """An object to hold the CPU registers."""
 
+    a: int   # Accumulator
+    x: int   # General Purpose X
+    y: int   # General Purpose Y
+    s: int   # Stack Pointer
+    pc: int  # Program Counter
+    p: int   # Flag Pointer - N|V|1|B|D|I|Z|C
+
     def __init__(self, pc: int = 0x0000):
         """
         Init Registers
@@ -73,7 +79,7 @@ class Registers:
         """
         if isinstance(flag, FlagBit):
             flag = flag.value
-        elif type(flag) is str:
+        elif isinstance(flag, str):
             flag = FlagBit[flag].value
 
         return bool(self.p & flag)
@@ -90,7 +96,7 @@ class Registers:
         """
         if isinstance(flag, FlagBit):
             flag = flag.value
-        elif type(flag) is str:
+        elif isinstance(flag, str):
             flag = FlagBit[flag].value
 
         if v:
@@ -105,7 +111,7 @@ class Registers:
         """
         if isinstance(flag, FlagBit):
             flag = flag.value
-        elif type(flag) is str:
+        elif isinstance(flag, str):
             flag = FlagBit[flag].value
 
         self.p = self.p & (255 - flag)
@@ -142,6 +148,8 @@ class Registers:
 
 
 class CPU:
+    running: bool
+
     def __init__(
         self,
         mmu: "MMU" = None,
@@ -217,7 +225,7 @@ class CPU:
         """
         self.cc = 0
         for i in instruction:
-            self.ops[i]()
+            self.operators[i].execute(),
             self.handle_interrupt()
 
     def handle_interrupt(self) -> None:
@@ -273,17 +281,17 @@ class CPU:
         "RESET": 0xfffc
     }
 
-    def interruptAddress(self, type: str) -> int:
-        return self.mmu.readWord(self.interrupts[type])
+    def interruptAddress(self, irq_type: str) -> int:
+        return self.mmu.readWord(self.interrupts[irq_type])
 
     def interruptRequest(self) -> None:
         """Trigger """
         self.trigger_irq = True
 
-    def breakOperation(self, type: str) -> None:
+    def breakOperation(self, irq_type: str) -> None:
         self.stackPushWord(self.r.pc + 1)
 
-        if type == "BRK":
+        if irq_type == "BRK":
             self.stackPush(self.r.p | FlagBit.B.value)
         else:
             self.stackPush(self.r.p)
@@ -391,28 +399,6 @@ class CPU:
 
     def iy(self) -> int:
         return self.mmu.read(self.iy_a())
-
-    def _create_ops(self):
-        def f(self, op_f, a_f, op):
-            self.opcode = op.opcode
-            op_f(a_f())
-            self.cc += op.cycles
-
-        def f_target(target) -> any:
-            return target
-
-        self.ops = [None] * 0x100
-
-        for op in self._ops.all():
-            op_f = getattr(self, op.opname)
-            if op.config:
-                a_f = functools.partial(f_target, op.config)
-            else:
-                a_f = getattr(self, op.amode)
-
-            fp = functools.partial(f, self, op_f, a_f, op)
-
-            self.ops[op.opcode] = fp
 
     """Instructions."""
 
@@ -633,25 +619,14 @@ class CPU:
     def SBC(self, v2) -> None:
         v1 = self.r.a
         if self.r.getFlag("D"):
-            """
             d1 = self.fromBCD(v1)
             d2 = self.fromBCD(v2)
             r = d1 - d2 - (not self.r.getFlag("C"))
             self.r.a = self.toBCD(r % 100)
-            """
-            d1 = (v1 & 0x0F) - (v2 & 0x0F) - self.r.getFlag("C")
-            d2 = (v1 >> 4) - (v2 >> 4) - (1 if d1 < 0 else 0)
 
-            r = (
-              (d1 + 10 if d1 < 0 else d1) | ((d2 + 10 if d2 < 0 else d2) << 4)
-            )
-            self.r.a = r
-
-            # self.r.setFlag("C", r > 99)
-            self.r.setFlag("C", d1 < 0)
+            self.r.setFlag("C", r > 99)
         else:
-            r = v1 - v2 - (not self.r.getFlag("C"))
-            # r = v1 + (v2 ^ 0xFF) + self.r.getFlag("C")
+            r = v1 + (v2 ^ 0xFF) + self.r.getFlag("C")
 
             self.r.a = r & 0xFF
 

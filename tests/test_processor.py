@@ -24,11 +24,11 @@ class RegisterMode(Enum):
     """
 
     # CMP Operation
-    Accumulator = (1,)
+    Accumulator = 0xA9
     # CPX Operation
-    XRegister = 2
+    XRegister = 0xA2
     # CPY Operation
-    YRegister = 3
+    YRegister = 0xA0
 
 
 class Processor(unittest.TestCase):
@@ -56,20 +56,27 @@ class Processor(unittest.TestCase):
             return 0
         return (self.c.stack_page * 0x100) + offset
 
-    def create(
-        self,
-        program: list | tuple,
-        data: list | tuple = [],
-        condition: int | None = None,
-        pc: int = 0x0000,
-    ) -> CPU:
+    def create(self, **kwargs) -> CPU:
+        """
+        :param array | tuple data: Parameters to program
+        :param array | tuple program: Program to run
+        :param int | None condition: Instruction to prepend to program if set
+        :param int pc: Program counter.
+        """
         print("\nINIT CPU\n")
-        if len(program) == 0:
+        if 'program' in kwargs and kwargs['program'] is not None:
+            program = kwargs['program']
+        else:
             program = [0x00]
 
-        if condition is not None:
-            program = [condition] + (
-                program if type(program) is not tuple else [*program]
+        if 'pc' in kwargs and kwargs['pc'] is not None:
+            pc = kwargs['pc']
+        else:
+            pc = 0x00
+
+        if 'condition' in kwargs and kwargs['condition'] is not None:
+            program = [kwargs['condition']] + (
+                program if isinstance(program, tuple) is False else [*program]
             )
             c = self._cpu(program, pc)
         else:
@@ -378,15 +385,7 @@ class InstructionASL(Processor):
                 else:
                     self.assertEqual(c.mmu.read(data[3]), data[2])
 
-    @parameterized.expand(
-        [
-            [0x7F, False],
-            [0x80, True],
-            [0xFF, True],
-            [0x00, False],
-        ]
-    )
-    def test_Carry_Set_Correctly(self, valueToShift, expectedValue):
+    def test_Carry_Set_Correctly(self):
         subtests = [
             (0x7F, False),
             (0x80, True),
@@ -2665,8 +2664,18 @@ class InstructionSBC(Processor):
 class InstructionSEC(Processor):
     """ SEC - Set Carry Flag
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0x38]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Carry_Flag_Set_Correctly(self):
-        c = self._cpu(program=[0x38])
+        c = self.create()
 
         c.step()
 
@@ -2676,8 +2685,18 @@ class InstructionSEC(Processor):
 class InstructionSED(Processor):
     """ SED - Set Decimal Mode
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xF8]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Decimal_Mode_Set_Correctly(self):
-        c = self._cpu(program=[0xF8])
+        c = self.create()
 
         c.step()
 
@@ -2687,8 +2706,18 @@ class InstructionSED(Processor):
 class InstructionSEI(Processor):
     """ SEI - Set Interrup Flag
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0x78]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Interrupt_Flag_Set_Correctly(self):
-        c = self._cpu(program=[0x78])
+        c = self.create()
 
         c.step()
 
@@ -2698,8 +2727,18 @@ class InstructionSEI(Processor):
 class InstructionSTA(Processor):
     """ STA - Store Accumulator In Memory
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA9, 0x03, 0x85, 0x05]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Memory_Has_Correct_Value(self):
-        c = self._cpu(program=[0xA9, 0x03, 0x85, 0x05])
+        c = self.create()
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2712,8 +2751,18 @@ class InstructionSTA(Processor):
 class InstructionSTX(Processor):
     """ STX - Set Memory To X
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA2, 0x03, 0x86, 0x05]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Memory_Has_Correct_Value(self):
-        c = self._cpu(program=[0xA2, 0x03, 0x86, 0x05])
+        c = self.create()
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2726,8 +2775,18 @@ class InstructionSTX(Processor):
 class InstructionSTY(Processor):
     """ STY - Set Memory To Y
     """
+    def create(
+        self, data: tuple | None = None, program: list | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA0, 0x03, 0x84, 0x05]
+
+        c = super().create(data=data, program=program)
+
+        return c
+
     def test_Memory_Has_Correct_Value(self):
-        c = self._cpu(program=[0xA0, 0x03, 0x84, 0x05])
+        c = self.create()
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2740,38 +2799,47 @@ class InstructionSTY(Processor):
 class InstructionTAX(Processor):
     """ TAX, TAY, TSX, TSY Tests
     """
-    @parameterized.expand(
-        [
-            [0xAA, RegisterMode.Accumulator, RegisterMode.XRegister],
-            [0xA8, RegisterMode.Accumulator, RegisterMode.YRegister],
-            [0x8A, RegisterMode.XRegister, RegisterMode.Accumulator],
-            [0x98, RegisterMode.YRegister, RegisterMode.Accumulator],
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None,
+    ) -> CPU:
+        if program is None:
+            program = [data[2].value, data[1], data[0]]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
+    def test_Transfer_Correct_Value_Set(self):
+        subtests = [
+            [0xAA, 0x03, RegisterMode.Accumulator, RegisterMode.XRegister],
+            [0xA8, 0x03, RegisterMode.Accumulator, RegisterMode.YRegister],
+            [0x8A, 0x03, RegisterMode.XRegister, RegisterMode.Accumulator],
+            [0x98, 0x03, RegisterMode.YRegister, RegisterMode.Accumulator],
         ]
-    )
-    def test_Transfer_Correct_Value_Set(
-        self, operation, transferFrom, transferTo
-    ):
-        if transferFrom == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif transferFrom == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c = self._cpu(program=[loadOperation, 0x03, operation])
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                match data[3]:
+                    case RegisterMode.Accumulator:
+                        self.assertEqual(c.r.a, data[1])
+                    case RegisterMode.XRegister:
+                        self.assertEqual(c.r.x, data[1])
+                    case RegisterMode.YRegister:
+                        self.assertEqual(c.r.y, data[1])
 
-        if transferTo == RegisterMode.Accumulator:
-            self.assertEqual(c.r.a, 0x03)
-        elif transferTo == RegisterMode.XRegister:
-            self.assertEqual(c.r.x, 0x03)
-        else:
-            self.assertEqual(c.r.y, 0x03)
-
-    @parameterized.expand(
-        [
+    def test_Transfer_Negative_Value_Set(self):
+        subtests = [
             [0xAA, 0x80, RegisterMode.Accumulator, True],
             [0xA8, 0x80, RegisterMode.Accumulator, True],
             [0x8A, 0x80, RegisterMode.XRegister, True],
@@ -2789,26 +2857,17 @@ class InstructionTAX(Processor):
             [0x8A, 0x00, RegisterMode.XRegister, False],
             [0x98, 0x00, RegisterMode.YRegister, False],
         ]
-    )
-    def test_Transfer_Negative_Value_Set(
-        self, operation, value, transferFrom, expectedResult
-    ):
-        if transferFrom == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif transferFrom == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c = self._cpu(program=[loadOperation, value, operation])
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                self.assertEqual(c.r.getFlag(FlagBit.N), data[3])
 
-        self.assertEqual(c.r.getFlag(FlagBit.N), expectedResult)
-
-    @parameterized.expand(
-        [
+    def test_Transfer_Zero_Value_Set(self):
+        subtests = [
             [0xAA, 0xFF, RegisterMode.Accumulator, False],
             [0xA8, 0xFF, RegisterMode.Accumulator, False],
             [0x8A, 0xFF, RegisterMode.XRegister, False],
@@ -2818,87 +2877,136 @@ class InstructionTAX(Processor):
             [0x8A, 0x00, RegisterMode.XRegister, True],
             [0x98, 0x00, RegisterMode.YRegister, True],
         ]
-    )
-    def test_Transfer_Zero_Value_Set(
-        self, operation, value, transferFrom, expectedResult
-    ):
-        if transferFrom == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif transferFrom == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c = self._cpu(program=[loadOperation, value, operation])
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
-
-        self.assertEqual(c.r.getFlag(FlagBit.Z), expectedResult)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), data[3])
 
 
 class InstructionTSX(Processor):
     """ TSX - Transfer Stack Pointer to X Register
     """
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA2, data[0], 0x9A, 0xBA]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
     def test_XRegister_Set_Correctly(self):
-        c = self._cpu(program=[0xBA])
+        c = self.create([], program=[0xBA])
 
         stackPointer = c.r.s
         c.step()
 
         self.assertEqual(c.r.x, stackPointer)
 
-    @parameterized.expand(
-        [
+    def test_Negative_Set_Correctly(self):
+        subtests = [
             [0x00, False],
             [0x7F, False],
             [0x80, True],
             [0xFF, True],
         ]
-    )
-    def test_Negative_Set_Correctly(self, valueToLoad, expectedValue):
-        c = self._cpu(program=[0xA2, valueToLoad, 0x9A, 0xBA])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c.step()
-        c.step()
-        c.step()
+                c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.getFlag(FlagBit.N), expectedValue)
+                self.assertEqual(c.r.getFlag(FlagBit.N), data[1])
 
-    @parameterized.expand(
-        [
+    def test_Zero_Set_Correctly(self):
+        subtests = [
             [0x00, True],
             [0x01, False],
             [0xFF, False],
         ]
-    )
-    def test_Zero_Set_Correctly(self, valueToLoad, expectedValue):
-        c = self._cpu(program=[0xA2, valueToLoad, 0x9A, 0xBA])
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c.step()
-        c.step()
-        c.step()
+                c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.getFlag(FlagBit.Z), expectedValue)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), data[1])
 
 
 class InstructionTXS(Processor):
     """ TXS - Transfer X Register to Stack Pointer
     """
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA2, data[0], 0x9A]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
     def test_Stack_Pointer_Set_Correctly(self):
-        c = self._cpu(program=[0xA2, 0xAA, 0x9A])
+        subtests = [
+            [0xAA,],
+            [0x00,],
+            [0xFF,],
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self.create(data)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.s, 0xAA)
+                self.assertEqual(c.r.s, data[0])
 
 
 class AccumulatorAddress(Processor):
     """ Accumulator Address Tests
     """
-    @parameterized.expand(
-        [
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None,
+    ) -> CPU:
+        if program is None:
+            program = [0xA9, data[1], data[0], 0x00]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
+    def test_Immediate_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x69, 0x01, 0x01, 0x02],  # ADC
             [0x29, 0x03, 0x03, 0x03],  # AND
             [0xA9, 0x04, 0x03, 0x03],  # LDA
@@ -2906,21 +3014,18 @@ class AccumulatorAddress(Processor):
             [0x09, 0x55, 0xAA, 0xFF],  # ORA
             [0xE9, 0x03, 0x01, 0x01],  # SBC
         ]
-    )
-    def test_Immediate_Mode_Accumulator_Has_Correct_Result(
-        self, operation, accumulatorInitialValue, valueToTest, expectedValue
-    ):
-        c = self._cpu([0xA9, accumulatorInitialValue, operation, valueToTest])
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], data[0], data[2]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                self.assertEqual(c.r.a, data[3])
 
-        self.assertEqual(c.r.a, expectedValue)
-
-    @parameterized.expand(
-        [
+    def test_ZeroPage_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x65, 0x01, 0x01, 0x02],  # ADC
             [0x25, 0x03, 0x03, 0x03],  # AND
             [0xA5, 0x04, 0x03, 0x03],  # LDA
@@ -2928,23 +3033,21 @@ class AccumulatorAddress(Processor):
             [0x05, 0x55, 0xAA, 0xFF],  # ORA
             [0xE5, 0x03, 0x01, 0x01],  # SBC
         ]
-    )
-    def test_ZeroPage_Mode_Accumulator_Has_Correct_Result(
-        self, operation, accumulatorInitialValue, valueToTest, expectedValue
-    ):
-        c = self._cpu(
-            [0xA9, accumulatorInitialValue, operation, 0x05, 0x00, valueToTest]
-        )
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], data[0], 0x05, 0x00, data[2]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                self.assertEqual(c.r.a, data[3])
 
-        self.assertEqual(c.r.a, expectedValue)
-
-    @parameterized.expand(
-        [
+    def test_ZeroPageX_Mode_Accumulator_Has_Correct_Result(self):
+        # Just remember that my value's for the STX and ADC were added to the
+        # end of the array. In a real program this would be invalid, as an
+        # opcode would be next and 0x03 would be somewhere else
+        subtests = [
             [0x75, 0x00, 0x03, 0x03],  # ADC
             [0x35, 0x03, 0x03, 0x03],  # AND
             [0xB5, 0x04, 0x03, 0x03],  # LDA
@@ -2952,36 +3055,21 @@ class AccumulatorAddress(Processor):
             [0x15, 0x55, 0xAA, 0xFF],  # ORA
             [0xF5, 0x03, 0x01, 0x01],  # SBC
         ]
-    )
-    def test_ZeroPageX_Mode_Accumulator_Has_Correct_Result(
-        self, operation, accumulatorInitialValue, valueToTest, expectedValue
-    ):
-        # Just remember that my value's for the STX and ADC were added to the
-        # end of the array. In a real program this would be invalid, as an
-        # opcode would be next and 0x03 would be somewhere else
-        c = self._cpu(
-            program=[
-                0xA9,
-                accumulatorInitialValue,
-                0xA2,
-                0x01,
-                operation,
-                0x06,
-                0x00,
-                valueToTest,
-            ]
-        )
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA2, 0x01, data[0], 0x06, 0x00, data[2]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
-        c.step()
-        c.step()
+                c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, expectedValue)
+                self.assertEqual(c.r.a, data[3])
 
-    @parameterized.expand(
-        [
+    def test_Absolute_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x6D, 0x00, 0x03, 0x03],  # ADC
             [0x2D, 0x03, 0x03, 0x03],  # AND
             [0xAD, 0x04, 0x03, 0x03],  # LDA
@@ -2989,41 +3077,20 @@ class AccumulatorAddress(Processor):
             [0x0D, 0x55, 0xAA, 0xFF],  # ORA
             [0xED, 0x03, 0x01, 0x01],  # SBC
         ]
-    )
-    def test_Absolute_Mode_Accumulator_Has_Correct_Result(
-        self, operation, accumulatorInitialValue, valueToTest, expectedValue
-    ):
-        c = CPU(
-            MMU(
-                [
-                    (
-                        0x0000,
-                        0x200,
-                        False,
-                        [
-                            0xA9,
-                            accumulatorInitialValue,
-                            operation,
-                            0x06,
-                            0x00,
-                            0x00,
-                            valueToTest,
-                        ],
-                    ),
-                ]
-            ),
-            pc=0x0000,
-        )
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, expectedValue)
+                self.assertEqual(c.r.a, data[3])
 
-    @parameterized.expand(
-        [
+    def test_AbsoluteX_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x7D, 0x01, 0x01, False, 0x02],  # ADC
             [0x3D, 0x03, 0x03, False, 0x03],  # AND
             [0xBD, 0x04, 0x03, False, 0x03],  # LDA
@@ -3037,59 +3104,27 @@ class AccumulatorAddress(Processor):
             [0x1D, 0x55, 0xAA, True, 0xFF],  # ORA
             [0xFD, 0x03, 0x01, True, 0x01],  # SBC
         ]
-    )
-    def test_AbsoluteX_Mode_Accumulator_Has_Correct_Result(
-        self,
-        operation,
-        accumulatorInitialValue,
-        valueToTest,
-        addressWraps,
-        expectedValue,
-    ):
-        if addressWraps:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA2,
-                0x09,
-                operation,
-                0xFF,
-                0xFF,
-                0x00,
-                valueToTest,
-            ]
-        else:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA2,
-                0x01,
-                operation,
-                0x07,
-                0x00,
-                0x00,
-                valueToTest,
-            ]
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA2,]
 
-        c = CPU(
-            MMU(
-                [
-                    (0x0000, 0x200, False, program),
-                ]
-            ),
-            pc=0x0000,
-        )
+                if data[3]:
+                    p += [0x09, data[0], 0xFF, 0xFF, 0x00, data[2]]
+                else:
+                    p += [0x01, data[0], 0x07, 0x00, 0x00, data[2]]
 
-        self.assertEqual(c.r.a, 0x00)
+                c = self.create(data, program=p)
 
-        c.step()
-        c.step()
-        c.step()
+                self.assertEqual(c.r.a, 0x00)
 
-        self.assertEqual(c.r.a, expectedValue)
+                c.step()
+                c.step()
+                c.step()
 
-    @parameterized.expand(
-        [
+                self.assertEqual(c.r.a, data[4])
+
+    def test_AbsoluteY_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x79, 0x01, 0x01, False, 0x02],  # ADC
             [0x39, 0x03, 0x03, False, 0x03],  # AND
             [0xB9, 0x04, 0x03, False, 0x03],  # LDA
@@ -3103,59 +3138,27 @@ class AccumulatorAddress(Processor):
             [0x19, 0x55, 0xAA, True, 0xFF],  # ORA
             [0xF9, 0x03, 0x01, True, 0x01],  # SBC
         ]
-    )
-    def test_AbsoluteY_Mode_Accumulator_Has_Correct_Result(
-        self,
-        operation,
-        accumulatorInitialValue,
-        valueToTest,
-        addressWraps,
-        expectedValue,
-    ):
-        if addressWraps:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA0,
-                0x09,
-                operation,
-                0xFF,
-                0xFF,
-                0x00,
-                valueToTest,
-            ]
-        else:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA0,
-                0x01,
-                operation,
-                0x07,
-                0x00,
-                0x00,
-                valueToTest,
-            ]
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA0,]
 
-        c = CPU(
-            MMU(
-                [
-                    (0x0000, 0x200, False, program),
-                ]
-            ),
-            pc=0x0000,
-        )
+                if data[3]:
+                    p += [0x09, data[0], 0xFF, 0xFF, 0x00, data[2]]
+                else:
+                    p += [0x01, data[0], 0x07, 0x00, 0x00, data[2]]
 
-        self.assertEqual(c.r.a, 0x00)
+                c = self.create(data, program=p)
 
-        c.step()
-        c.step()
-        c.step()
+                self.assertEqual(c.r.a, 0x00)
 
-        self.assertEqual(c.r.a, expectedValue)
+                c.step()
+                c.step()
+                c.step()
 
-    @parameterized.expand(
-        [
+                self.assertEqual(c.r.a, data[4])
+
+    def test_Indexed_Indirect_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x61, 0x01, 0x01, False, 0x02],  # ADC
             [0x21, 0x03, 0x03, False, 0x03],  # AND
             [0xA1, 0x04, 0x03, False, 0x03],  # LDA
@@ -3169,53 +3172,27 @@ class AccumulatorAddress(Processor):
             [0x01, 0x55, 0xAA, True, 0xFF],  # ORA
             [0xE1, 0x03, 0x01, True, 0x01],  # SBC
         ]
-    )
-    def test_Indexed_Indirect_Mode_Accumulator_Has_Correct_Result(
-        self,
-        operation,
-        accumulatorInitialValue,
-        valueToTest,
-        addressWraps,
-        expectedValue,
-    ):
-        if addressWraps:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA6,
-                0x06,
-                operation,
-                0xFF,
-                0x08,
-                0x9,
-                0x00,
-                valueToTest,
-            ]
-        else:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA6,
-                0x06,
-                operation,
-                0x01,
-                0x06,
-                0x9,
-                0x00,
-                valueToTest,
-            ]
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA6, 0x06, data[0]]
 
-        c = self._cpu(program=program)
-        self.assertEqual(c.r.a, 0x00)
+                if data[3]:
+                    p += [0xFF, 0x08, 0x09, 0x00, data[2]]
+                else:
+                    p += [0x01, 0x06, 0x09, 0x00, data[2]]
 
-        c.step()
-        c.step()
-        c.step()
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, expectedValue)
+                self.assertEqual(c.r.a, 0x00)
 
-    @parameterized.expand(
-        [
+                c.step()
+                c.step()
+                c.step()
+
+                self.assertEqual(c.r.a, data[4])
+
+    def test_Indirect_Indexed_Mode_Accumulator_Has_Correct_Result(self):
+        subtests = [
             [0x71, 0x01, 0x01, False, 0x02],  # ADC
             [0x31, 0x03, 0x03, False, 0x03],  # AND
             [0xB1, 0x04, 0x03, False, 0x03],  # LDA
@@ -3229,330 +3206,241 @@ class AccumulatorAddress(Processor):
             [0x11, 0x55, 0xAA, True, 0xFF],  # ORA
             [0xF1, 0x03, 0x01, True, 0x01],  # SBC
         ]
-    )
-    def test_Indirect_Indexed_Mode_Accumulator_Has_Correct_Result(
-        self,
-        operation,
-        accumulatorInitialValue,
-        valueToTest,
-        addressWraps,
-        expectedValue,
-    ):
-        if addressWraps:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA0,
-                0x0A,
-                operation,
-                0x07,
-                0x00,
-                0xFF,
-                0xFF,
-                valueToTest,
-            ]
-        else:
-            program = [
-                0xA9,
-                accumulatorInitialValue,
-                0xA0,
-                0x01,
-                operation,
-                0x07,
-                0x00,
-                0x08,
-                0x00,
-                valueToTest,
-            ]
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA0]
+                p = [0xA9, data[1], 0xA0]
 
-        c = self._cpu(program=program)
+                if data[3]:
+                    p += [0x0A, data[0], 0x07, 0x00, 0xFF, 0xFF, data[2]]
+                else:
+                    p += [0x01, data[0], 0x07, 0x00, 0x08, 0x00, data[2]]
 
-        self.assertEqual(c.r.a, 0x00)
+                c = self.create(data, program=p)
 
-        c.step()
-        c.step()
-        c.step()
+                self.assertEqual(c.r.a, 0x00)
 
-        self.assertEqual(
-            c.r.a,
-            expectedValue,
-            "{:0>2x} != {:0>2x} - {}".format(c.r.a, expectedValue, c.r)
-        )
+                c.step()
+                c.step()
+                c.step()
+
+                self.assertEqual(c.r.a, data[4])
 
 
 class IndexAddress(Processor):
     """ Index Address Tests
     """
-    @parameterized.expand(
-        [
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA9, data[1], data[0], 0x00]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
+    def test_ZeroPage_Mode_Index_Has_Correct_Result(self):
+        subtests = [
             [0xA6, 0x03, True],  # LDX Zero Page
             [0xB6, 0x03, True],  # LDX Zero Page Y
             [0xA4, 0x03, False],  # LDY Zero Page
             [0xB4, 0x03, False],  # LDY Zero Page X
         ]
-    )
-    def test_ZeroPage_Mode_Index_Has_Correct_Result(
-        self, operation, valueToLoad, testXRegister
-    ):
-        c = self._cpu(program=[operation, 0x03, 0x00, valueToLoad])
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [data[0], 0x03, 0x00, data[1]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
+                c.step()
 
-        if testXRegister:
-            self.assertEqual(c.r.x, valueToLoad)
-        else:
-            self.assertEqual(c.r.y, valueToLoad)
+                if data[2]:
+                    self.assertEqual(c.r.x, data[1])
+                else:
+                    self.assertEqual(c.r.y, data[1])
 
-    @parameterized.expand(
-        [
+    def test_ZeroPage_Mode_Index_Has_Correct_Result_When_Wrapped(self):
+        subtests = [
             [0xB6, 0x03, True],  # LDX Zero Page Y
             [0xB4, 0x03, False],  # LDY Zero Page X
         ]
-    )
-    def test_ZeroPage_Mode_Index_Has_Correct_Result_When_Wrapped(
-        self, operation, valueToLoad, testXRegister
-    ):
-        if testXRegister:
-            registerOperation = 0xA0
-        else:
-            registerOperation = 0xA2
+        for data in subtests:
+            with self.subTest(data=data):
+                if data[2]:
+                    p = [0xA0, 0xFF, data[0], 0x06, 0x00, data[1]]
+                else:
+                    p = [0xA2, 0xFF, data[0], 0x06, 0x00, data[1]]
 
-        c = self._cpu(
-            [registerOperation, 0xFF, operation, 0x06, 0x00, valueToLoad]
-        )
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        if testXRegister:
-            self.assertEqual(c.r.x, valueToLoad)
-        else:
-            self.assertEqual(c.r.y, valueToLoad)
+                if data[2]:
+                    self.assertEqual(c.r.x, data[1])
+                else:
+                    self.assertEqual(c.r.y, data[1])
 
-    @parameterized.expand(
-        [
+    def test_Absolute_Mode_Index_Has_Correct_Result(self):
+        subtests = [
             [0xAE, 0x03, True],  # LDX Absolute
             [0xAC, 0x03, False],  # LDY Absolute
         ]
-    )
-    def test_Absolute_Mode_Index_Has_Correct_Result(
-        self, operation, valueToLoad, testXRegister
-    ):
-        c = self._cpu([operation, 0x04, 0x00, 0x00, valueToLoad])
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [data[0], 0x04, 0x00, 0x00, data[1]]
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
+                c.step()
 
-        if testXRegister:
-            self.assertEqual(c.r.x, valueToLoad)
-        else:
-            self.assertEqual(c.r.y, valueToLoad)
+                if data[2]:
+                    self.assertEqual(c.r.x, data[1])
+                else:
+                    self.assertEqual(c.r.y, data[1])
 
 
 class CompareAddress(Processor):
     """ Compare Address Tests
     """
-    @parameterized.expand(
-        [
+    def create(
+        self,
+        data: tuple,
+        program: list | None = None,
+        condition: int | None = None
+    ) -> CPU:
+        if program is None:
+            program = [0xA9, data[1], data[0], 0x00]
+
+        c = super().create(
+            data=data,
+            program=program,
+            condition=condition
+        )
+
+        return c
+
+    def test_Immediate_Mode_Compare_Operation_Has_Correct_Result(self):
+        subtests = [
             [0xC9, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Immediate
             [0xE0, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Immediate
             [0xC0, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Immediate
         ]
-    )
-    def test_Immediate_Mode_Compare_Operation_Has_Correct_Result(
-        self, operation, accumulatorValue, memoryValue, mode
-    ):
-        if mode == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif mode == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [data[3].value, data[1], data[0], data[2]]
+                c = self.create(data, program=p)
 
-        c = self._cpu(
-            [loadOperation, accumulatorValue, operation, memoryValue]
-        )
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
-        c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.getFlag(FlagBit.Z), False)
-        self.assertEqual(c.r.getFlag(FlagBit.N), True)
-        self.assertEqual(c.r.getFlag(FlagBit.C), True)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), False)
+                self.assertEqual(c.r.getFlag(FlagBit.N), True)
+                self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
-    @parameterized.expand(
-        [
+    def test_ZeroPage_Modes_Compare_Operation_Has_Correct_Result(self):
+        subtests = [
             [0xC5, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Zero Page
             [0xD5, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Zero Page X
             [0xE4, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Zero Page
             [0xC4, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Zero Page
         ]
-    )
-    def test_ZeroPage_Modes_Compare_Operation_Has_Correct_Result(
-        self, operation, accumulatorValue, memoryValue, mode
-    ):
-        if mode == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif mode == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [data[3].value, data[1], data[0], data[2]]
+                c = self.create(data, program=p)
 
-        c = self._cpu(
-            [loadOperation, accumulatorValue, operation, 0x04, memoryValue]
-        )
+                self.assertEqual(c.r.a, 0x00)
 
-        self.assertEqual(c.r.a, 0x00)
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
+                self.assertEqual(c.r.getFlag(FlagBit.Z), False)
+                self.assertEqual(c.r.getFlag(FlagBit.N), True)
+                self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
-        self.assertEqual(c.r.getFlag(FlagBit.Z), False)
-        self.assertEqual(c.r.getFlag(FlagBit.N), True)
-        self.assertEqual(c.r.getFlag(FlagBit.C), True)
-
-    @parameterized.expand(
-        [
+    def test_Absolute_Modes_Compare_Operation_Has_Correct_Result(self):
+        subtests = [
             [0xCD, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Absolute
             [0xDD, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Absolute X
             [0xEC, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Absolute
             [0xCC, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Absolute
         ]
-    )
-    def test_Absolute_Modes_Compare_Operation_Has_Correct_Result(
-        self, operation, accumulatorValue, memoryValue, mode
-    ):
-        if mode == RegisterMode.Accumulator:
-            loadOperation = 0xA9
-        elif mode == RegisterMode.XRegister:
-            loadOperation = 0xA2
-        else:
-            loadOperation = 0xA0
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [data[3].value, data[1], data[0], 0x05, 0x00, data[2]]
+                c = self.create(data, program=p)
 
-        c = self._cpu(
-            program=[
-                loadOperation,
-                accumulatorValue,
-                operation,
-                0x05,
-                0x00,
-                memoryValue,
-            ]
-        )
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.a, 0x00)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), False)
+                self.assertEqual(c.r.getFlag(FlagBit.N), True)
+                self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
-        c.step()
-        c.step()
-
-        self.assertEqual(c.r.getFlag(FlagBit.Z), False)
-        self.assertEqual(c.r.getFlag(FlagBit.N), True)
-        self.assertEqual(c.r.getFlag(FlagBit.C), True)
-
-    @parameterized.expand(
-        [
+    def test_Indexed_Indirect_Mode_CMP_Operation_Has_Correct_Result(self):
+        subtests = [
             [0xC1, 0xFF, 0x00, True],
             [0xC1, 0xFF, 0x00, False],
         ]
-    )
-    def test_Indexed_Indirect_Mode_CMP_Operation_Has_Correct_Result(
-        self, operation, accumulatorValue, memoryValue, addressWraps
-    ):
-        if addressWraps:
-            c = self._cpu(
-                program=[
-                    0xA9,
-                    accumulatorValue,
-                    0xA6,
-                    0x06,
-                    operation,
-                    0xFF,
-                    0x08,
-                    0x09,
-                    0x00,
-                    memoryValue,
-                ]
-            )
-        else:
-            c = self._cpu(
-                program=[
-                    0xA9,
-                    accumulatorValue,
-                    0xA6,
-                    0x06,
-                    operation,
-                    0x01,
-                    0x06,
-                    0x09,
-                    0x00,
-                    memoryValue,
-                ]
-            )
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0xA6, 0x06, data[0]]
+                if data[3]:
+                    p += [0xFF, 0x08, 0x09, 0x00, data[2]]
+                else:
+                    p += [0x01, 0x06, 0x09, 0x00, data[2]]
 
-        self.assertEqual(c.r.a, 0x00)
+                c = self.create(data, program=p)
+                self.assertEqual(c.r.a, 0x00)
 
-        c.step()
-        c.step()
-        c.step()
+                c.step()
+                c.step()
+                c.step()
 
-        self.assertEqual(c.r.getFlag(FlagBit.Z), False)
-        self.assertEqual(c.r.getFlag(FlagBit.N), True)
-        self.assertEqual(c.r.getFlag(FlagBit.C), True)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), False)
+                self.assertEqual(c.r.getFlag(FlagBit.N), True)
+                self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
-    @parameterized.expand(
-        [
+    def test_Indirect_Indexed_Mode_CMP_Operation_Has_Correct_Result(self):
+        subtests = [
             [0xD1, 0xFF, 0x00, True],
             [0xD1, 0xFF, 0x00, False],
         ]
-    )
-    def test_Indirect_Indexed_Mode_CMP_Operation_Has_Correct_Result(
-        self, operation, accumulatorValue, memoryValue, addressWraps
-    ):
-        if addressWraps:
-            program = [
-                0xA9,
-                accumulatorValue,
-                0x84,
-                0x06,
-                operation,
-                0x07,
-                0x0A,
-                0xFF,
-                0xFF,
-                memoryValue,
-            ]
-        else:
-            program = [
-                0xA9,
-                accumulatorValue,
-                0x84,
-                0x06,
-                operation,
-                0x07,
-                0x01,
-                0x08,
-                0x00,
-                memoryValue,
-            ]
+        for data in subtests:
+            with self.subTest(data=data):
+                p = [0xA9, data[1], 0x84, 0x06, data[0], 0x07,]
+                if data[3]:
+                    p += [0x0A, 0xFF, 0xFF, data[2]]
+                else:
+                    p += [0x01, 0x08, 0x00, data[2]]
 
-        c = self._cpu(program=program)
+                c = self.create(data, program=p)
 
-        self.assertEqual(c.r.a, 0x00)
+                c.step()
+                c.step()
+                c.step()
 
-        c.step()
-        c.step()
-        c.step()
-
-        self.assertEqual(c.r.getFlag(FlagBit.Z), False)
-        self.assertEqual(c.r.getFlag(FlagBit.N), True)
-        self.assertEqual(c.r.getFlag(FlagBit.C), True)
+                self.assertEqual(c.r.getFlag(FlagBit.Z), False)
+                self.assertEqual(c.r.getFlag(FlagBit.N), True)
+                self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
 
 class DecrementIncrementAddress(Processor):

@@ -15,7 +15,7 @@ from py65emu.cpu import CPU
 from py65emu.mmu import MMU
 
 
-class TestOperator(unittest.TestCase):
+class TestOperation(unittest.TestCase):
     def setUp(self):
         pass
 

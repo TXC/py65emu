@@ -1,0 +1,118 @@
+$0200 a0 01 00 LDY: LDY #$01        A: 00 X: 00 Y: 01 S: FF PC: 0202 P: ..U..I..
+$0202 84 0b 00 STY: STY $0b         A: 00 X: 00 Y: 01 S: FF PC: 0204 P: ..U..I..
+$0204 a9 00 00 LDA: LDA #$00        A: 00 X: 00 Y: 01 S: FF PC: 0206 P: ..U..IZ.
+$0206 85 00 00 STA: STA $00         A: 00 X: 00 Y: 01 S: FF PC: 0208 P: ..U..IZ.
+$0208 85 01 00 STA: STA $01         A: 00 X: 00 Y: 01 S: FF PC: 020A P: ..U..IZ.
+$020a a5 01 00 LDA: LDA $01         A: 00 X: 00 Y: 01 S: FF PC: 020C P: ..U..IZ.
+$020c 29 0f 00 AND: AND #$0f        A: 00 X: 00 Y: 01 S: FF PC: 020E P: ..U..IZ.
+$020e 85 0e 00 STA: STA $0e         A: 00 X: 00 Y: 01 S: FF PC: 0210 P: ..U..IZ.
+$0210 a5 01 00 LDA: LDA $01         A: 00 X: 00 Y: 01 S: FF PC: 0212 P: ..U..IZ.
+$0212 29 f0 00 AND: AND #$f0        A: 00 X: 00 Y: 01 S: FF PC: 0214 P: ..U..IZ.
+$0214 85 0f 00 STA: STA $0f         A: 00 X: 00 Y: 01 S: FF PC: 0216 P: ..U..IZ.
+$0216 09 0f 00 ORA: ORA #$0f        A: 0F X: 00 Y: 01 S: FF PC: 0218 P: ..U..I..
+$0218 85 10 00 STA: STA $10         A: 0F X: 00 Y: 01 S: FF PC: 021A P: ..U..I..
+$021a a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FF PC: 021C P: ..U..IZ.
+$021c 29 0f 00 AND: AND #$0f        A: 00 X: 00 Y: 01 S: FF PC: 021E P: ..U..IZ.
+$021e 85 0c 00 STA: STA $0c         A: 00 X: 00 Y: 01 S: FF PC: 0220 P: ..U..IZ.
+$0220 a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FF PC: 0222 P: ..U..IZ.
+$0222 29 f0 00 AND: AND #$f0        A: 00 X: 00 Y: 01 S: FF PC: 0224 P: ..U..IZ.
+$0224 85 0d 00 STA: STA $0d         A: 00 X: 00 Y: 01 S: FF PC: 0226 P: ..U..IZ.
+$0226 20 4c 02 JSR: JSR $4c02       A: 00 X: 00 Y: 01 S: FD PC: 024C P: ..U..IZ.
+$024c f8 00 00  SE: SED             A: 00 X: 00 Y: 01 S: FD PC: 024D P: ..U.DIZ.
+$024d c0 01 00 CPY: CPY #$01        A: 00 X: 00 Y: 01 S: FD PC: 024F P: ..U.DIZC
+$024f a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FD PC: 0251 P: ..U.DIZC
+$0251 65 01 00 ADC: ADC $01         A: 01 X: 00 Y: 01 S: FD PC: 0253 P: ..U.DI..
+$0253 85 04 00 STA: STA $04         A: 01 X: 00 Y: 01 S: FD PC: 0255 P: ..U.DI..
+$0255 08 00 00   P: PHP             A: 01 X: 00 Y: 01 S: FC PC: 0256 P: ..U.DI..
+$0256 68 00 00   P: PLA             A: 3C X: 00 Y: 01 S: FD PC: 0257 P: ..U.DI..
+$0257 85 05 00 STA: STA $05         A: 3C X: 00 Y: 01 S: FD PC: 0259 P: ..U.DI..
+$0259 d8 00 00  CL: CLD             A: 3C X: 00 Y: 01 S: FD PC: 025A P: ..U..I..
+$025a c0 01 00 CPY: CPY #$01        A: 3C X: 00 Y: 01 S: FD PC: 025C P: ..U..IZC
+$025c a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FD PC: 025E P: ..U..IZC
+$025e 65 01 00 ADC: ADC $01         A: 01 X: 00 Y: 01 S: FD PC: 0260 P: ..U..I..
+$0260 85 02 00 STA: STA $02         A: 01 X: 00 Y: 01 S: FD PC: 0262 P: ..U..I..
+$0262 08 00 00   P: PHP             A: 01 X: 00 Y: 01 S: FC PC: 0263 P: ..U..I..
+$0263 68 00 00   P: PLA             A: 34 X: 00 Y: 01 S: FD PC: 0264 P: ..U..I..
+$0264 85 03 00 STA: STA $03         A: 34 X: 00 Y: 01 S: FD PC: 0266 P: ..U..I..
+$0266 c0 01 00 CPY: CPY #$01        A: 34 X: 00 Y: 01 S: FD PC: 0268 P: ..U..IZC
+$0268 a5 0c 00 LDA: LDA $0c         A: 00 X: 00 Y: 01 S: FD PC: 026A P: ..U..IZC
+$026a 65 0e 00 ADC: ADC $0e         A: 01 X: 00 Y: 01 S: FD PC: 026C P: ..U..I..
+$026c c9 0a 00 CMP: CMP #$0a        A: 01 X: 00 Y: 01 S: FD PC: 026E P: N.U..I..
+$026e a2 00 00 LDX: LDX #$00        A: 01 X: 00 Y: 01 S: FD PC: 0270 P: ..U..IZ.
+$0270 90 06 00   B: BCC $06 [0277]  A: 01 X: 00 Y: 01 S: FD PC: 0278 P: ..U..IZ.
+$0278 05 0d 00 ORA: ORA $0d         A: 01 X: 00 Y: 01 S: FD PC: 027A P: ..U..I..
+$027a 75 0f 00 ADC: ADC $0f, X      A: 01 X: 00 Y: 01 S: FD PC: 027C P: ..U..I..
+$027c 08 00 00   P: PHP             A: 01 X: 00 Y: 01 S: FC PC: 027D P: ..U..I..
+$027d b0 04 00   B: BCS $04 [0282]  A: 01 X: 00 Y: 01 S: FC PC: 027F P: ..U..I..
+$027f c9 a0 00 CMP: CMP #$a0        A: 01 X: 00 Y: 01 S: FC PC: 0281 P: ..U..I..
+$0281 90 03 00   B: BCC $03 [0285]  A: 01 X: 00 Y: 01 S: FC PC: 0286 P: ..U..I..
+$0286 85 06 00 STA: STA $06         A: 01 X: 00 Y: 01 S: FC PC: 0288 P: ..U..I..
+$0288 08 00 00   P: PHP             A: 01 X: 00 Y: 01 S: FB PC: 0289 P: ..U..I..
+$0289 68 00 00   P: PLA             A: 34 X: 00 Y: 01 S: FC PC: 028A P: ..U..I..
+$028a 85 0a 00 STA: STA $0a         A: 34 X: 00 Y: 01 S: FC PC: 028C P: ..U..I..
+$028c 68 00 00   P: PLA             A: 34 X: 00 Y: 01 S: FD PC: 028D P: ..U..I..
+$028d 85 08 00 STA: STA $08         A: 34 X: 00 Y: 01 S: FD PC: 028F P: ..U..I..
+$028f 60 00 00 RTS: RTS             A: 34 X: 00 Y: 01 S: FF PC: 0229 P: ..U..I..
+$0229 20 d3 02 JSR: JSR $d302       A: 34 X: 00 Y: 01 S: FD PC: 02D3 P: ..U..I..
+$02d3 a5 08 00 LDA: LDA $08         A: 34 X: 00 Y: 01 S: FD PC: 02D5 P: ..U..I..
+$02d5 85 07 00 STA: STA $07         A: 34 X: 00 Y: 01 S: FD PC: 02D7 P: ..U..I..
+$02d7 a5 03 00 LDA: LDA $03         A: 34 X: 00 Y: 01 S: FD PC: 02D9 P: ..U..I..
+$02d9 85 09 00 STA: STA $09         A: 34 X: 00 Y: 01 S: FD PC: 02DB P: ..U..I..
+$02db 60 00 00 RTS: RTS             A: 34 X: 00 Y: 01 S: FF PC: 022C P: ..U..I..
+$022c 20 c6 02 JSR: JSR $c602       A: 34 X: 00 Y: 01 S: FD PC: 02C6 P: ..U..I..
+$02c6 a5 04 00 LDA: LDA $04         A: 01 X: 00 Y: 01 S: FD PC: 02C8 P: ..U..I..
+$02c8 c5 06 00 CMP: CMP $06         A: 01 X: 00 Y: 01 S: FD PC: 02CA P: ..U..IZC
+$02ca d0 06 00   B: BNE $06 [02d1]  A: 01 X: 00 Y: 01 S: FD PC: 02CC P: ..U..IZC
+$02cc a5 05 00 LDA: LDA $05         A: 3C X: 00 Y: 01 S: FD PC: 02CE P: ..U..I.C
+$02ce 45 0a 00 EOR: EOR $0a         A: 08 X: 00 Y: 01 S: FD PC: 02D0 P: ..U..I.C
+$02d0 29 01 00 AND: AND #$01        A: 00 X: 00 Y: 01 S: FD PC: 02D2 P: ..U..IZC
+$02d2 60 00 00 RTS: RTS             A: 00 X: 00 Y: 01 S: FF PC: 022F P: ..U..IZC
+$022f d0 1a 00   B: BNE $1a [024a]  A: 00 X: 00 Y: 01 S: FF PC: 0231 P: ..U..IZC
+$0231 20 90 02 JSR: JSR $9002       A: 00 X: 00 Y: 01 S: FD PC: 0290 P: ..U..IZC
+$0290 f8 00 00  SE: SED             A: 00 X: 00 Y: 01 S: FD PC: 0291 P: ..U.DIZC
+$0291 c0 01 00 CPY: CPY #$01        A: 00 X: 00 Y: 01 S: FD PC: 0293 P: ..U.DIZC
+$0293 a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FD PC: 0295 P: ..U.DIZC
+$0295 e5 01 00 SBC: SBC $01         A: 99 X: 00 Y: 01 S: FD PC: 0297 P: N.U.DI.C
+$0297 85 04 00 STA: STA $04         A: 99 X: 00 Y: 01 S: FD PC: 0299 P: N.U.DI.C
+$0299 08 00 00   P: PHP             A: 99 X: 00 Y: 01 S: FC PC: 029A P: N.U.DI.C
+$029a 68 00 00   P: PLA             A: BD X: 00 Y: 01 S: FD PC: 029B P: N.U.DI.C
+$029b 85 05 00 STA: STA $05         A: BD X: 00 Y: 01 S: FD PC: 029D P: N.U.DI.C
+$029d d8 00 00  CL: CLD             A: BD X: 00 Y: 01 S: FD PC: 029E P: N.U..I.C
+$029e c0 01 00 CPY: CPY #$01        A: BD X: 00 Y: 01 S: FD PC: 02A0 P: ..U..IZC
+$02a0 a5 00 00 LDA: LDA $00         A: 00 X: 00 Y: 01 S: FD PC: 02A2 P: ..U..IZC
+$02a2 e5 01 00 SBC: SBC $01         A: 00 X: 00 Y: 01 S: FD PC: 02A4 P: ..U..IZ.
+$02a4 85 02 00 STA: STA $02         A: 00 X: 00 Y: 01 S: FD PC: 02A6 P: ..U..IZ.
+$02a6 08 00 00   P: PHP             A: 00 X: 00 Y: 01 S: FC PC: 02A7 P: ..U..IZ.
+$02a7 68 00 00   P: PLA             A: 36 X: 00 Y: 01 S: FD PC: 02A8 P: ..U..I..
+$02a8 85 03 00 STA: STA $03         A: 36 X: 00 Y: 01 S: FD PC: 02AA P: ..U..I..
+$02aa 60 00 00 RTS: RTS             A: 36 X: 00 Y: 01 S: FF PC: 0234 P: ..U..I..
+$0234 20 dc 02 JSR: JSR $dc02       A: 36 X: 00 Y: 01 S: FD PC: 02DC P: ..U..I..
+$02dc 20 ab 02 JSR: JSR $ab02       A: 36 X: 00 Y: 01 S: FB PC: 02AB P: ..U..I..
+$02ab c0 01 00 CPY: CPY #$01        A: 36 X: 00 Y: 01 S: FB PC: 02AD P: ..U..IZC
+$02ad a5 0c 00 LDA: LDA $0c         A: 00 X: 00 Y: 01 S: FB PC: 02AF P: ..U..IZC
+$02af e5 0e 00 SBC: SBC $0e         A: 00 X: 00 Y: 01 S: FB PC: 02B1 P: ..U..IZ.
+$02b1 a2 00 00 LDX: LDX #$00        A: 00 X: 00 Y: 01 S: FB PC: 02B3 P: ..U..IZ.
+$02b3 b0 06 00   B: BCS $06 [02ba]  A: 00 X: 00 Y: 01 S: FB PC: 02B5 P: ..U..IZ.
+$02b5 e8 00 00 INX: INX             A: 00 X: 01 Y: 01 S: FB PC: 02B6 P: ..U..I..
+$02b6 e9 05 00 SBC: SBC #$05        A: FA X: 01 Y: 01 S: FB PC: 02B8 P: N.U..I.C
+$02b8 29 0f 00 AND: AND #$0f        A: 0A X: 01 Y: 01 S: FB PC: 02BA P: ..U..I.C
+$02ba 18 05 00  CL: CLC #$05        A: 0A X: 01 Y: 01 S: FB PC: 02BB P: ..U..I..
+$02bb 05 0d 00 ORA: ORA $0d         A: 0A X: 01 Y: 01 S: FB PC: 02BD P: ..U..I..
+$02bd f5 0f 00 SBC: SBC $0f, X      A: FA X: 01 Y: 01 S: FB PC: 02BF P: N.U..I.C
+$02bf b0 02 00   B: BCS $02 [02c2]  A: FA X: 01 Y: 01 S: FB PC: 02C3 P: N.U..I.C
+$02c3 85 06 00 STA: STA $06         A: FA X: 01 Y: 01 S: FB PC: 02C5 P: N.U..I.C
+$02c5 60 00 00 RTS: RTS             A: FA X: 01 Y: 01 S: FD PC: 02DF P: N.U..I.C
+$02df a5 03 00 LDA: LDA $03         A: 36 X: 01 Y: 01 S: FD PC: 02E1 P: ..U..I.C
+$02e1 85 07 00 STA: STA $07         A: 36 X: 01 Y: 01 S: FD PC: 02E3 P: ..U..I.C
+$02e3 85 08 00 STA: STA $08         A: 36 X: 01 Y: 01 S: FD PC: 02E5 P: ..U..I.C
+$02e5 85 09 00 STA: STA $09         A: 36 X: 01 Y: 01 S: FD PC: 02E7 P: ..U..I.C
+$02e7 85 0a 00 STA: STA $0a         A: 36 X: 01 Y: 01 S: FD PC: 02E9 P: ..U..I.C
+$02e9 60 00 00 RTS: RTS             A: 36 X: 01 Y: 01 S: FF PC: 0237 P: ..U..I.C
+$0237 20 c6 02 JSR: JSR $c602       A: 36 X: 01 Y: 01 S: FD PC: 02C6 P: ..U..I.C
+$02c6 a5 04 00 LDA: LDA $04         A: 99 X: 01 Y: 01 S: FD PC: 02C8 P: N.U..I.C
+$02c8 c5 06 00 CMP: CMP $06         A: 99 X: 01 Y: 01 S: FD PC: 02CA P: N.U..I..
+$02ca d0 06 00   B: BNE $06 [02d1]  A: 99 X: 01 Y: 01 S: FD PC: 02D2 P: N.U..I..
+$02d2 60 00 00 RTS: RTS             A: 99 X: 01 Y: 01 S: FF PC: 023A P: N.U..I..
+$023a d0 0f 00   B: BNE $0f [024a]  A: 99 X: 01 Y: 01 S: FF PC: 024B P: N.U..I..
+$024b d2 00 00 KIL: KIL             A: 99 X: 01 Y: 01 S: FF PC: 024C P: N.U..I..
+No. of cycles 117

@@ -2,32 +2,40 @@ from typing import TYPE_CHECKING
 import math
 
 if TYPE_CHECKING:
-    from py65emu.operator import Operation
+    from py65emu.operation import Operation
     from py65emu.cpu import CPU
-
-MemoryType = tuple[int,
-                   int, int, int, int,
-                   int, int, int, int,
-                   int, int, int, int,
-                   int, int, int, int,
-                   ]
 
 
 class Disassembly:
+    """
+    Disassembly class, to help disassemble a program in memory
+    """
+
     def __init__(
-            self,
-            op: "Operation",
-            pc: int,
-            hi: int = 0x00,
-            lo: int = 0x00
+        self,
+        op: "Operation",
+        pc: int,
+        hi: int = 0x00,
+        lo: int = 0x00
     ):
+        """
+        Init Disassembly Method
+
+        :param Operation op: Operation to disassemble
+        :param int pc: Current programcounter
+        :param int hi: Hi-byte of memory. (Default: `0x00`)
+        :param int lo: Lo-byte of memory. (Default: `0x00`)
+        """
         self.op = op
         self.pc = pc
         self.hi = hi
         self.lo = lo
 
     @property
-    def memory(self) -> int:
+    def memory(self) -> str:
+        """
+        Returns mnemonic string with current memory addresses
+        """
         prefix = f"{self.op.name} "
         match self.op.mode:
             case "acc":
@@ -39,52 +47,81 @@ class Disassembly:
             case "z":
                 return prefix + f"${self.lo:0>2x} "
             case "zx":
-                return prefix + f"${self.lo:0>2x}, X "
+                addr = self.lo + self.op.cpu.r.x
+                return prefix + f"${self.lo:0>2x}, X [${addr:0>4x}]"
             case "zy":
-                return prefix + f"${self.lo:0>2x}, Y "
+                addr = self.lo + self.op.cpu.r.y
+                return prefix + f"${self.lo:0>2x}, Y [${addr:0>4x}]"
             case "a":
-                return prefix + f"${self.lo:0>2x}{self.hi:0>2x} "
+                return prefix + f"${self.hi:0>2x}{self.lo:0>2x} "
             case "ax":
-                return prefix + f"${self.lo:0>2x}{self.hi:0>2x}, X "
+                addr = (self.hi << 8) + self.lo + self.op.cpu.r.x
+                return prefix + (
+                    f"${self.hi:0>2x}{self.hi:0>2x}, "
+                    f"X [${addr:0>4x}]"
+                )
             case "ay":
-                return prefix + f"${self.lo:0>2x}{self.hi:0>2x}, Y "
+                addr = (self.hi << 8) + self.lo + self.op.cpu.r.y
+                return prefix + (
+                    f"${self.hi:0>2x}{self.lo:0>2x}, "
+                    f"Y [${addr:0>4x}]"
+                )
             case "i":
-                return prefix + f"(${self.lo:0>2x}{self.hi:0>2x}) "
+                return prefix + f"(${self.hi:0>2x}{self.lo:0>2x}) "
             case "ix":
-                return prefix + f"(${self.lo:0>2x}, X) "
+                loc_addr = self.lo + self.op.cpu.r.x
+                addr = (
+                    (self.op.cpu.mmu.read(loc_addr + 1) << 8) +
+                    self.op.cpu.mmu.read(loc_addr)
+                ) & 0xFFFF
+                return prefix + f"(${self.lo:0>2x}, X) [${addr:0>4x}]"
             case "iy":
-                return prefix + f"(${self.lo:0>2x}), Y "
+                loc_addr = (
+                    (self.op.cpu.mmu.read(self.lo + 1) << 8) +
+                    self.op.cpu.mmu.read(self.lo)
+                ) & 0xFFFF
+                addr = loc_addr + self.op.cpu.r.y
+                return prefix + f"(${self.lo:0>2x}), Y [${addr:0>4x}]"
             case "rel":
                 addr = (
                     (self.pc + 1) + self.op.cpu.fromTwosCom(self.lo)
                 ) & 0xFFFF
-                """
-                if self.lo & 0x80:
-                    addr = (((self.pc + 1) - self.lo ^ 0xff) + 1) & 0xFFFF
-                else:
-                    addr = ((self.pc + 1) + self.lo) & 0xFFFF
-                """
                 return prefix + f"${self.lo:0>2x} [${addr:0>4x}] "
+        return ""
 
     def __repr__(self) -> str:
+        """Returns everything nicely formated"""
         return f"${self.pc:0>4x} {self.op.opcode:0>2x} {self.lo:0>2x} "\
                f"{self.hi:0>2x} {self.op.opname: >3s}: {self.memory}"
 
 
 class Debug:
+    """
+    Debug class, do help debug a program or the module itself.
+    """
+
     def __init__(self, cpu: "CPU"):
+        """
+        :param CPU cpu: The CPU object to debug
+        """
+
         self.cpu = cpu
 
     def _get_assembly(self, addr: int) -> tuple[int, "Disassembly"]:
         """
         This is the disassembly function.
         Its workings are not required for emulation.
+
         It is merely a convenience function to turn the binary instruction
         code into human readable form. Its included as part of the emulator
         because it can take advantage of many of the CPUs internal operations
         to do
 
+        :mode private:
         :param int addr: address to disassemble
+        :rtype: tuple[int, Disassembly]
+        :return: Tuple with the current address and corresponding
+                 Disassembly object
         """
         addr_org = addr
         opcode = self.cpu.mmu.read(addr)
@@ -92,7 +129,7 @@ class Debug:
         hi = 0x00
         lo = 0x00
 
-        op = self.cpu.operators[opcode]
+        op = self.cpu.opcodes[opcode]
         if op.bytes == 2:
             lo = self.cpu.mmu.read(addr)
             addr += 1
@@ -111,13 +148,17 @@ class Debug:
 
         return addr, assembly
 
-    def _get_memory(self, start: int, stop: int) -> list[MemoryType]:
+    def _get_memory(self, start: int, stop: int) -> list[tuple[int, ...]]:
         """
         Dumps a portion of the memory.
         This reads over blocks.
 
+        :mode private:
         :param int start: Start offset
         :param int stop: Stop offset
+        :rtype: list[tuple[int, ...]]
+        :return: A list with a tuple of the memory data from the selected
+                 memory span
         """
         start_offset = start & 0xFFF0
         stop_offset = stop | 0x000F
@@ -129,32 +170,54 @@ class Debug:
         for multiplier in range(offset_length):
             offset = start_offset + (multiplier * 0x0010)
 
-            value = (offset,)
+            value = [offset,]
             for addr in range(0x10):
-                res = self.cpu.mmu.read(offset + addr),
-                value += res
+                value += self.cpu.mmu.read(offset + addr),
 
-            memory.append(value)
+            memory.append(tuple(value))
         return memory
 
     def d(self, addr: int) -> None:
+        """
+        Shorthand method for print out dump of memory and disassembly for
+        selected address
+
+        :param addr: Address to dump
+        :type addr: int
+        """
         self.memdump(addr)
         self.disassemble(addr)
+
+    @staticmethod
+    def crash_dump(cpu: "CPU"):
+        """
+        Static method to dump out backtrace of the program that was running
+        """
+        entry = cpu.mmu.read(0xFFFD) + (cpu.mmu.read(0xFFFC) << 8)
+
+        pc = cpu.r.pc - 20
+        if pc < entry:
+            pc = entry
+
+        d = Debug(cpu)
+        d.disassemble(pc, cpu.r.pc)
 
     """Disassembly methods."""
     def disassemble(
         self, start: int | None = None, stop: int | None = None
     ) -> None:
         """
-        :param int|None start: The starting address. (Default: PC - 20)
-        :param int|None stop: The stopping address. If stop is lower than start
-            then parameter will be used as "length" (ie. incr. by start)
-            instead. (Default: PC)
+        :param start: The starting address. (Default: PC - 20)
+        :param stop: The stopping address. If stop is lower than start then
+                     parameter will be used as "length" (ie. incr. by start)
+                     instead. (Default: PC)
+        :type start: int | None
+        :type stop: int | None
         """
-        addr = start & 0xFFFF
-
         if start is None:
             start = self.cpu.r.pc - 10
+
+        addr = start & 0xFFFF
 
         if stop is None:
             stop = self.cpu.r.pc
@@ -173,9 +236,20 @@ class Debug:
 
     def disassemble_list(self, start: int, stop: int) -> list[Disassembly]:
         """
-        This disassembly function will turn a chunk of binary code into human
-        readable form.
-        See the above function for a more descriptive text
+        See :py:meth:`py65emu.debug.Debug.disassemble` for a more descriptive
+        text
+
+        .. seealso::
+           :py:meth:`py65emu.debug.Debug.disassemble`
+
+        :param start: The starting address. (Default: PC - 20)
+        :param stop: The stopping address. If stop is lower than start then
+                     parameter will be used as "length" (ie. incr. by start)
+                     instead. (Default: PC)
+        :type start: int | None
+        :type stop: int | None
+        :rtype: list[Disassembly]
+        :return: A list of Disassembly objects
         """
         addr = start & 0xFFFF
 
@@ -184,7 +258,7 @@ class Debug:
         if stop < start:
             stop += start
 
-        lines = []
+        lines: list[Disassembly] = []
         while addr <= (stop & 0xFFFF):
             cur = addr
             addr, assembly = self._get_assembly(addr)
@@ -194,8 +268,12 @@ class Debug:
     """Memory methods."""
     def memdump(self, start: int, stop: int | None = None) -> None:
         """
-        Prints a portion of the memory.
-        This reads over blocks.
+        Prints the memory data between `start` and `stop` parameters.
+        If `stop` parameter is left out, it will dump the 16 byte segment where
+        the `start` address exists.
+        (`start = start & 0xFFF0` and `stop = start | 0x000F`)
+
+        This method reads over blocks.
 
         :param int start: Start offset
         :param int | None stop: Stop offset. (Default: None)
@@ -222,5 +300,15 @@ class Debug:
             offset += 2
             print("".ljust((offset * 3) + 1, " ") + " ^^")
 
-    def stackdump(self, pointer: int = 0) -> None:
+    def stackdump(self, pointer: int | None = None) -> None:
+        """
+        Convience method to dump the stack around the current stackpointer
+        (Register S)
+
+        :param pointer: Stack Pointer Location
+        :type pointer: int | None
+        """
+        if pointer == 0:
+            pointer = self.cpu.r.s
+
         self.memdump((self.cpu.stack_page * 0x100) + pointer)

@@ -15,6 +15,104 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
+    /*
+    "assertEqual": {
+        "scope": "python",
+        "prefix": "assertequal",
+        "body": [
+            "self.assertEqual($1, $2)"
+        ],
+        "description": "a == b",
+    },
+    "assertNotEqual": {
+        "scope": "python",
+        "prefix": "assertnotequal",
+        "body": [
+            "self.assertNotEqual($1, $2)"
+        ],
+        "description": "a != b",
+    },
+    "assertTrue": {
+        "scope": "python",
+        "prefix": "asserttrue",
+        "body": [
+            "self.assertTrue($1)"
+        ],
+        "description": "bool(x) is True",
+    },
+    "assertFalse": {
+        "scope": "python",
+        "prefix": "assertfalse",
+        "body": [
+            "self.assertFalse($1)"
+        ],
+        "description": "bool(x) is False",
+    },
+    "assertIs": {
+        "scope": "python",
+        "prefix": "assertis",
+        "body": [
+            "self.assertIs($1, $2)"
+        ],
+        "description": "a is b",
+    },
+    "assertIsNot": {
+        "scope": "python",
+        "prefix": "assertisnot",
+        "body": [
+            "self.assertIsNot($1, $2)"
+        ],
+        "description": "a is not b",
+    },
+    "assertIsNone": {
+        "scope": "python",
+        "prefix": "assertisnone",
+        "body": [
+            "self.assertIsNone($1)"
+        ],
+        "description": "x is None",
+    },
+    "assertIsNotNone": {
+        "scope": "python",
+        "prefix": "assertisnotnone",
+        "body": [
+            "self.assertIsNotNone($1)"
+        ],
+        "description": "x is not None",
+    },
+    "assertIn": {
+        "scope": "python",
+        "prefix": "assertin",
+        "body": [
+            "self.assertIn($1, $2)"
+        ],
+        "description": "a in b",
+    },
+    "assertNotIn": {
+        "scope": "python",
+        "prefix": "assertnotin",
+        "body": [
+            "self.assertNotIn($1, $2)"
+        ],
+        "description": "a not in b",
+    },
+    "assertIsInstance": {
+        "scope": "python",
+        "prefix": "assertisinstance",
+        "body": [
+            "self.assertIsInstance($1, $2)"
+        ],
+        "description": "isinstance(a, b)",
+    },
+    "assertNotIsInstance": {
+        "scope": "python",
+        "prefix": "assertnotisinstance",
+        "body": [
+            "self.assertNotIsInstance($1, $2)"
+        ],
+        "description": "not isinstance(a, b)",
+    },
+    */
 	"Test": {
 		"scope": "python",
 		"prefix": "test",
@@ -25,12 +123,10 @@
 			"    ]",
 			"    for data in subtests:",
 			"        with self.subTest(data=data):",
-			"            c = self.create(data)",
+			"            c = self.create(program=p)",
 			"",
 			"            c.step()",
 			"            c.step()",
-			"",
-			"           self.assertEqual(${2|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${3|0,1,2,3,4|}])",
 			"",
 		],
 		"description": "Test Stub"
@@ -44,13 +140,23 @@
 			"]",
 			"for data in subtests:",
 			"    with self.subTest(data=data):",
-			"        c = self.create(data)",
+			"        p = [$1]",
+			"        c = self.create(program=p)",
 			"",
 			"        c.step()",
 			"        c.step()",
 			"",
-			"        self.assertEqual(${1|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${2|0,1,2,3,4|}])",
+			"        self.assertEqual(${2|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${3|0,1,2,3,4|}])",
 			"",
+		],
+		"description": "SubTest Stub"
+	},
+	"TestAssertion": {
+		"scope": "python",
+		"prefix": "assert",
+		"body": [
+			"self.assertEqual(${1|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${2|0,1,2,3,4|}])",
+			"$0",
 		],
 		"description": "SubTest Stub"
 	},
@@ -58,20 +164,14 @@
 		"scope": "python",
 		"prefix": "create",
 		"body": [
-			"def create(",
-            "    self,",
-            "    data: tuple,",
-            "    program: list | None = None,",
-            "    condition: int | None = None",
-            ") -> CPU:",
+			"def create(self, *args, **kwargs) -> CPU:",
 			"    if program is None:",
 			"        program = [$0]",
 			"",
-			"    c = super().create(",
-            "        data=data,",
-            "        program=program,",
-            "        condition=condition${1:,\n        pc=data[0],}",
-            "    )",
+			"    c = super().create(*args, **kwargs)",
+			"",
+			"    if condition:",
+			"        c.step()",
 			"",
 			"    return c",
 			"",

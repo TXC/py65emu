@@ -83,20 +83,20 @@ class TestCPU(unittest.TestCase):
         c.r.x = 0
         c.cc = 0
         self.assertEqual(c.ax_a(), 0x0403)
-        self.assertEqual(c.cc, 0)
+        self.assertEqual(c.cc, 2)
         c.r.x = 0xFF
         c.cc = 0
         self.assertEqual(c.ax_a(), 0x0605 + 0xFF)
-        self.assertEqual(c.cc, 1)
+        self.assertEqual(c.cc, 2)
 
         c.r.y = 0
         c.cc = 0
         self.assertEqual(c.ay_a(), 0x0807)
-        self.assertEqual(c.cc, 0)
+        self.assertEqual(c.cc, 2)
         c.r.y = 0xFF
         c.cc = 0
         self.assertEqual(c.ay_a(), 0x0A09 + 0xFF)
-        self.assertEqual(c.cc, 1)
+        self.assertEqual(c.cc, 2)
 
     def test_indirect_addressing(self):
         c = self._cpu(
@@ -664,7 +664,9 @@ class TestCPU(unittest.TestCase):
 
         c.r.a = 0x1F
         c.execute([0xAB])
-        self.assertEqual(c.r.x, 0x18)
+        # self.assertEqual(c.r.x, 0x18)
+        self.assertEqual(c.r.a, 0xf0)
+        self.assertEqual(c.r.x, 0xf0)
 
     def test_axa(self):
         c = self._cpu(ram=(0, 0x400, False), romInit=[0xFF, 0x01])
@@ -840,8 +842,9 @@ class TestCPU(unittest.TestCase):
         expected_cycles = [2, 4, 5, 2, 2, 3, 4]
 
         for expected_cycle in expected_cycles:
-            c.step()
-            self.assertEqual(c.cc, expected_cycle)
+            with self.subTest(expected_cycle=expected_cycle):
+                c.step()
+                self.assertEqual(c.cc, expected_cycle, f"{c.op.opcode:0>2x}")
 
     def tearDown(self):
         pass

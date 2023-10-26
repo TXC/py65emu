@@ -21,7 +21,7 @@ class Timing(unittest.TestCase):
     def setUp(self):
         pass
 
-    def load_csv_data(self) -> list[dict]:
+    def load_csv_data(self) -> dict[int, dict[str, object]]:
         path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "files",
@@ -60,8 +60,9 @@ class Timing(unittest.TestCase):
             "6502_cycle_test.bin"
         )
 
+        mmu = MMU()
         with open(path, "rb") as f:
-            mmu = MMU([(0x0000, 0x10000, False, f)])
+            mmu.addBlock(0x0000, 0x10000, False, f)
 
         c = CPU(mmu, 0x00)
         c.r.s = 0xFD

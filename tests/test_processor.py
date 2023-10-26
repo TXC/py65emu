@@ -36,7 +36,8 @@ class Processor(unittest.TestCase):
     def setUp(self):
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
+        # Debug.crash_dump(self.c)
         pass
 
     def _cpu(self, program=None, pc=0x0000) -> CPU:
@@ -55,7 +56,7 @@ class Processor(unittest.TestCase):
             return 0
         return (self.c.stack_page * 0x100) + offset
 
-    def create(self, **kwargs) -> CPU:
+    def create(self, *args, **kwargs) -> CPU:
         """
         :param array | tuple data: Parameters to program
         :param array | tuple program: Program to run
@@ -66,6 +67,9 @@ class Processor(unittest.TestCase):
         pc = 0x00
         program = []
 
+        if len(args) > 0:
+            if 'program' not in kwargs:
+                kwargs['program'] = args[1]
         if 'program' in kwargs and kwargs['program'] is not None:
             program = kwargs['program']
 
@@ -121,21 +125,10 @@ class Initialization(Processor):
 class InstructionADC(Processor):
     """ ADC - Add with Carry Tests
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: bool = False
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x69, data[1]]
+    def create(self, *args, **kwargs) -> CPU:
+        c = super().create(*args, **kwargs)
 
-        c = super().create(
-            data=data,
-            program=program,
-            condition=(0x38 if condition is True else None)
-        )
-        if condition:
+        if 'condition' in kwargs and kwargs['condition'] is not None:
             c.step()
 
         return c
@@ -158,7 +151,10 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0x69, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -175,14 +171,14 @@ class InstructionADC(Processor):
         subtests = [
             (0x99, 0x99, False, 0x98),
             (0x99, 0x99, True, 0x99),
-            (0x90, 0x99, False, 0x89)
+            (0x90, 0x99, False, 0x89),
+            (0x01, 0x69, True, 0x71),
         ]
         for data in subtests:
             with self.subTest(data=data):
                 c = self.create(
-                    data,
                     program=[0xF8, 0xA9, data[0], 0x69, data[1]],
-                    condition=data[2]
+                    condition=(0x38 if data[2] is True else None)
                 )
 
                 c.step()
@@ -202,7 +198,10 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0x69, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -219,7 +218,10 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0x69, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -236,7 +238,7 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x69, data[1]],)
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -257,7 +259,7 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x69, data[1]],)
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -300,7 +302,10 @@ class InstructionADC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0x69, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -312,25 +317,6 @@ class InstructionADC(Processor):
 class InstructionAND(Processor):
     """ AND - Compare Memory with Accumulator
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: bool = False
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x29, data[1]]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=(0x38 if condition is True else None)
-        )
-        if condition:
-            c.step()
-
-        return c
-
     def test_Accumulator_Correct(self):
         subtests = [
             (0, 0, 0),
@@ -340,7 +326,7 @@ class InstructionAND(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x29, data[1]])
 
                 c.step()
                 c.step()
@@ -350,18 +336,6 @@ class InstructionAND(Processor):
 class InstructionASL(Processor):
     """ ASL - Arithmetic Shift Left
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x0A]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Correct_Value_Stored(self):
         subtests = [
             (0x0A, 0x6D, 0xDA, 0x00),  # ASL Accumulator
@@ -374,7 +348,7 @@ class InstructionASL(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], data[0], data[3]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 self.assertEqual(c.r.a, data[1])
@@ -395,7 +369,7 @@ class InstructionASL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x0A])
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -413,7 +387,7 @@ class InstructionASL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x0A])
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -429,7 +403,7 @@ class InstructionASL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x0A])
 
                 c.step()
                 self.assertEqual(c.r.a, data[0])
@@ -441,18 +415,6 @@ class InstructionASL(Processor):
 class InstructionBCC(Processor):
     """ BCC - Branch On Carry Clear
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0x90, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x03),
@@ -463,7 +425,7 @@ class InstructionBCC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0x90, data[1]], pc=data[0])
 
                 c.step()
 
@@ -473,18 +435,6 @@ class InstructionBCC(Processor):
 class InstructionBCS(Processor):
     """ BCS - Branch on Carry Set
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0x38, 0xB0, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x04),
@@ -494,7 +444,10 @@ class InstructionBCS(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(
+                    program=[0x38, 0xB0, data[1]],
+                    pc=data[0]
+                )
 
                 c.step()
                 c.step()
@@ -505,18 +458,6 @@ class InstructionBCS(Processor):
 class InstructionBEQ(Processor):
     """ BEQ - Branch on Zero Set
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x00, 0xF0, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x05),
@@ -527,7 +468,10 @@ class InstructionBEQ(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(
+                    program=[0xA9, 0x00, 0xF0, data[1]],
+                    pc=data[0]
+                )
 
                 c.step()
                 c.step()
@@ -538,18 +482,6 @@ class InstructionBEQ(Processor):
 class InstructionBIT(Processor):
     """ BIT - Compare Memory with Accumulator
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Negative_Set_When_Comparison_Is_Negative_Number(self):
         subtests = [
             (0x24, 0x7F, 0x7F, False),  # BIT Zero Page
@@ -565,7 +497,8 @@ class InstructionBIT(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -609,7 +542,8 @@ class InstructionBIT(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -629,7 +563,8 @@ class InstructionBIT(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -640,18 +575,6 @@ class InstructionBIT(Processor):
 class InstructionBMI(Processor):
     """ BMI - Branch if Negative Set
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x80, 0x30, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x05),
@@ -661,7 +584,10 @@ class InstructionBMI(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(
+                    program=[0xA9, 0x80, 0x30, data[1]],
+                    pc=data[0]
+                )
 
                 c.step()
                 c.step()
@@ -672,18 +598,6 @@ class InstructionBMI(Processor):
 class InstructionBNE(Processor):
     """ BNE - Branch On Result Not Zero
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x80, 0xD0, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x05),
@@ -693,7 +607,10 @@ class InstructionBNE(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(
+                    program=[0xA9, 0x80, 0xD0, data[1]],
+                    pc=data[0]
+                )
 
                 c.step()
                 c.step()
@@ -704,18 +621,6 @@ class InstructionBNE(Processor):
 class InstructionBPL(Processor):
     """ BPL - Branch if Negative Clear
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x79, 0x10, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x05),
@@ -725,7 +630,10 @@ class InstructionBPL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(
+                    program=[0xA9, 0x79, 0x10, data[1]],
+                    pc=data[0]
+                )
 
                 c.step()
                 c.step()
@@ -736,24 +644,8 @@ class InstructionBPL(Processor):
 class InstructionBRK(Processor):
     """ BRK - Simulate Interrupt Request (IRQ)
     """
-    def create(
-        self,
-        data: tuple = (),
-        program: list | tuple = (),
-        pc: int = 0x0000
-    ) -> CPU:
-        if type(program) is tuple:
-            program = [*program]
-
-        if len(program) == 0:
-            program = [0x00]
-
-        c = super().create(data=data, program=program, pc=pc)
-
-        return c
-
     def test_Program_Counter_Set_To_Address_At_Break_Vector_Address(self):
-        c = self._cpu([0x00], 0x1000)
+        c = self.create(program=[0x00], pc=0x1000)
 
         c.mmu.write(0xFFFE, 0xBC)
         c.mmu.write(0xFFFF, 0xCD)
@@ -765,7 +657,7 @@ class InstructionBRK(Processor):
         self.assertEqual(c.r.pc, 0xCDBC)
 
     def test_Program_Counter_Stack_Correct(self):
-        c = self._cpu([0x00, 0xFF], 0xABCD)
+        c = self.create(program=[0x00, 0xFF], pc=0xABCD)
 
         stackLocation = c.r.s
         c.step()
@@ -780,7 +672,7 @@ class InstructionBRK(Processor):
         )
 
     def test_Stack_Pointer_Correct(self):
-        c = self._cpu([0x00], 0xABCD)
+        c = self.create(program=[0x00], pc=0xABCD)
 
         stackLocation = c.r.s
         c.step()
@@ -836,18 +728,6 @@ class InstructionBRK(Processor):
 class InstructionBVC(Processor):
     """ BVC - Branch if Overflow Clear
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0x50, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             (0x00, 0x01, 0x03),
@@ -857,7 +737,7 @@ class InstructionBVC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0x50, data[1]], pc=data[0])
 
                 c.step()
                 self.assertEqual(c.r.pc, data[2])
@@ -866,18 +746,6 @@ class InstructionBVC(Processor):
 class InstructionBVS(Processor):
     """ BVS - Branch if Overflow Set
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x01, 0x69, 0x7F, 0x70, data[1]]
-
-        c = super().create(data=data, program=program, pc=data[0])
-
-        return c
-
     def test_Program_Counter_Correct(self):
         subtests = [
             [0x00, 0x01, 0x07],
@@ -887,7 +755,8 @@ class InstructionBVS(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA9, 0x01, 0x69, 0x7F, 0x70, data[1]]
+                c = self.create(program=p, pc=data[0])
 
                 c.step()
                 c.step()
@@ -899,18 +768,8 @@ class InstructionBVS(Processor):
 class InstructionCLC(Processor):
     """ CLC - Clear Carry Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0x18]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Carry_Flag_Cleared_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0x18])
 
         c.step()
 
@@ -920,18 +779,8 @@ class InstructionCLC(Processor):
 class InstructionCLD(Processor):
     """ CLD - Clear Decimal Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xF8, 0xD8]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Carry_Flag_Set_And_Cleared_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0xF8, 0xD8])
 
         c.step()
         c.step()
@@ -942,18 +791,8 @@ class InstructionCLD(Processor):
 class InstructionCLI(Processor):
     """ CLI - Clear Interrupt Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0x58]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Interrup_Flag_Cleared_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0x58])
 
         c.step()
 
@@ -963,18 +802,8 @@ class InstructionCLI(Processor):
 class InstructionCLV(Processor):
     """ CLV - Clear Overflow Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xB8]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Overflow_Flag_Cleared_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0xB8])
 
         c.step()
 
@@ -984,14 +813,6 @@ class InstructionCLV(Processor):
 class InstructionCMP(Processor):
     """ CMP - Compare Memory With Accumulator
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0xC9, data[1]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Zero_Flag_Set_When_Values_Match(self):
         subtests = [
             (0x00, 0x00, True),
@@ -1001,7 +822,7 @@ class InstructionCMP(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xC9, data[1]])
 
                 c.step()
                 c.step()
@@ -1020,7 +841,7 @@ class InstructionCMP(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xC9, data[1]])
 
                 c.step()
                 c.step()
@@ -1037,7 +858,7 @@ class InstructionCMP(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xC9, data[1]])
 
                 c.step()
                 c.step()
@@ -1048,14 +869,6 @@ class InstructionCMP(Processor):
 class InstructionCPX(Processor):
     """ CPX - Compare Memory With X Register
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA2, data[0], 0xE0, data[1]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Zero_Flag_Set_When_Values_Match(self):
         subtests = [
             (0x00, 0x00, True),
@@ -1065,7 +878,7 @@ class InstructionCPX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE0, data[1]])
 
                 c.step()
                 c.step()
@@ -1084,7 +897,7 @@ class InstructionCPX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE0, data[1]])
 
                 c.step()
                 c.step()
@@ -1101,7 +914,7 @@ class InstructionCPX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE0, data[1]])
 
                 c.step()
                 c.step()
@@ -1112,14 +925,6 @@ class InstructionCPX(Processor):
 class InstructionCPY(Processor):
     """ CPY - Compare Memory With Y Register
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA0, data[0], 0xC0, data[1]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Zero_Flag_Set_When_Values_Match(self):
         subtests = [
             (0x00, 0x00, True),
@@ -1129,7 +934,7 @@ class InstructionCPY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC0, data[1]])
 
                 c.step()
                 c.step()
@@ -1146,7 +951,7 @@ class InstructionCPY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC0, data[1]])
 
                 c.step()
                 c.step()
@@ -1163,7 +968,7 @@ class InstructionCPY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC0, data[1]])
 
                 c.step()
                 c.step()
@@ -1174,14 +979,6 @@ class InstructionCPY(Processor):
 class InstructionDEC(Processor):
     """ DEC - Decrement Memory by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xC6, 0x03, 0x00, data[0]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Memory_Has_Correct_Value(self):
         subtests = [
             (0x00, 0xFF),
@@ -1189,7 +986,7 @@ class InstructionDEC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xC6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1203,7 +1000,7 @@ class InstructionDEC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xC6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1217,7 +1014,7 @@ class InstructionDEC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xC6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1227,14 +1024,6 @@ class InstructionDEC(Processor):
 class InstructionDEX(Processor):
     """ DEX - Decrement X by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA2, data[0], 0xCA]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_XRegister_Has_Correct_Value(self):
         subtests = [
             [0x00, 0xFF],
@@ -1242,7 +1031,7 @@ class InstructionDEX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xCA])
 
                 c.step()
                 c.step()
@@ -1257,7 +1046,7 @@ class InstructionDEX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xCA])
 
                 c.step()
                 c.step()
@@ -1272,7 +1061,7 @@ class InstructionDEX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xCA])
 
                 c.step()
                 c.step()
@@ -1283,14 +1072,6 @@ class InstructionDEX(Processor):
 class InstructionDEY(Processor):
     """ DEY - Decrement Y by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA0, data[0], 0x88]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_YRegister_Has_Correct_Value(self):
         subtests = [
             [0x00, 0xFF],
@@ -1298,7 +1079,7 @@ class InstructionDEY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0x88])
 
                 c.step()
                 c.step()
@@ -1313,7 +1094,7 @@ class InstructionDEY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0x88])
 
                 c.step()
                 c.step()
@@ -1328,7 +1109,7 @@ class InstructionDEY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0x88])
 
                 c.step()
                 c.step()
@@ -1339,14 +1120,6 @@ class InstructionDEY(Processor):
 class InstructionEOR(Processor):
     """ EOR - Exclusive OR Compare Accumulator With Memory
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x49, data[1]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Accumulator_Correct(self):
         subtests = [
             [0x00, 0x00, 0x00],
@@ -1357,7 +1130,7 @@ class InstructionEOR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x49, data[1]])
 
                 c.step()
                 c.step()
@@ -1373,7 +1146,7 @@ class InstructionEOR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x49, data[1]])
 
                 c.step()
                 c.step()
@@ -1387,7 +1160,7 @@ class InstructionEOR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x49, data[1]])
 
                 c.step()
                 c.step()
@@ -1398,14 +1171,6 @@ class InstructionEOR(Processor):
 class InstructionINC(Processor):
     """ INC - Increment Memory by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xE6, 0x03, 0x00, data[0]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Memory_Has_Correct_Value(self):
         subtests = [
             [0x00, 0x01],
@@ -1413,7 +1178,7 @@ class InstructionINC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xE6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1427,7 +1192,7 @@ class InstructionINC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xE6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1441,7 +1206,7 @@ class InstructionINC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xE6, 0x03, 0x00, data[0]])
 
                 c.step()
 
@@ -1451,14 +1216,6 @@ class InstructionINC(Processor):
 class InstructionINX(Processor):
     """ INX - Increment X by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA2, data[0], 0xE8]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_XRegister_Has_Correct_Value(self):
         subtests = [
             [0x00, 0x01],
@@ -1466,7 +1223,7 @@ class InstructionINX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE8])
 
                 c.step()
                 c.step()
@@ -1481,7 +1238,7 @@ class InstructionINX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE8])
 
                 c.step()
                 c.step()
@@ -1496,7 +1253,7 @@ class InstructionINX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0], 0xE8])
 
                 c.step()
                 c.step()
@@ -1507,14 +1264,6 @@ class InstructionINX(Processor):
 class InstructionINY(Processor):
     """ INY - Increment Y by One
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA0, data[0], 0xC8]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_YRegisgter_Has_Correct_Value(self):
         subtests = [
             [0x00, 0x01],
@@ -1522,7 +1271,7 @@ class InstructionINY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC8])
 
                 c.step()
                 c.step()
@@ -1537,7 +1286,7 @@ class InstructionINY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC8])
 
                 c.step()
                 c.step()
@@ -1552,7 +1301,7 @@ class InstructionINY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0], 0xC8])
 
                 c.step()
                 c.step()
@@ -1564,21 +1313,21 @@ class InstructionJMP(Processor):
     """ JMP - Jump to New Location
     """
     def test_Program_Counter_Set_Correctly_After_Jump(self):
-        c = self._cpu([0x4C, 0x08, 0x00])
+        c = self.create(program=[0x4C, 0x08, 0x00])
 
         c.step()
 
         self.assertEqual(c.r.pc, 0x08)
 
     def test_Program_Counter_Set_Correctly_After_Indirect_Jump(self):
-        c = self._cpu([0x6C, 0x03, 0x00, 0x08, 0x00])
+        c = self.create(program=[0x6C, 0x03, 0x00, 0x08, 0x00])
 
         c.step()
 
         self.assertEqual(c.r.pc, 0x08)
 
     def test_Indirect_Wraps_Correct_If_MSB_IS_FF(self):
-        c = self._cpu([0x6C, 0xFF, 0x01, 0x08, 0x00])
+        c = self.create(program=[0x6C, 0xFF, 0x01, 0x08, 0x00])
         c.mmu.write(0x01FE, 0x6C)
         c.step()
         c.mmu.write(0x01FF, 0x03)
@@ -1592,8 +1341,7 @@ class InstructionJSR(Processor):
     """ JSR - Jump to SubRoutine
     """
     def test_Stack_Loads_Correct_Value(self):
-        c = self._cpu([0x20, 0xCC, 0xCC])
-        c.r.pc = 0xBBAA
+        c = self.create(program=[0x20, 0xCC, 0xCC], pc=0xBBAA)
 
         stackLocation = c.r.s
         c.step()
@@ -1608,14 +1356,14 @@ class InstructionJSR(Processor):
         )
 
     def test_Program_Counter_Correct(self):
-        c = self._cpu([0x20, 0xCC, 0xCC])
+        c = self.create(program=[0x20, 0xCC, 0xCC])
 
         c.step()
 
         self.assertEqual(c.r.pc, 0xCCCC)
 
     def test_Stack_Pointer_Correct(self):
-        c = self._cpu([0x20, 0xCC, 0xCC])
+        c = self.create(program=[0x20, 0xCC, 0xCC])
 
         stackLocation = c.r.s
         c.step()
@@ -1626,16 +1374,6 @@ class InstructionJSR(Processor):
 class InstructionLDA(Processor):
     """ LDA - Load Accumulator with Memory
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA9, data[0]]
-
-        c = super().create(data=data, program=program)
-
-        self.assertEqual(c.r.a, 0x00)
-
-        return c
-
     def test_Accumulator_Has_Correct_Value(self):
         subtests = [
             (0x03,),
@@ -1645,7 +1383,7 @@ class InstructionLDA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0]])
 
                 c.step()
 
@@ -1658,7 +1396,7 @@ class InstructionLDA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0]])
 
                 c.step()
 
@@ -1673,7 +1411,7 @@ class InstructionLDA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0]])
 
                 c.step()
                 c.step()
@@ -1684,16 +1422,6 @@ class InstructionLDA(Processor):
 class InstructionLDX(Processor):
     """ LDX - Load X with Memory
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA2, data[0]]
-
-        c = super().create(data=data, program=program)
-
-        self.assertEqual(c.r.x, 0x00)
-
-        return c
-
     def test_XRegister_Value_Has_Correct_Value(self):
         subtests = [
             (0x00,),
@@ -1703,7 +1431,7 @@ class InstructionLDX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0]])
 
                 c.step()
 
@@ -1718,7 +1446,7 @@ class InstructionLDX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0]])
 
                 c.step()
 
@@ -1731,7 +1459,7 @@ class InstructionLDX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA2, data[0]])
 
                 c.step()
 
@@ -1741,16 +1469,6 @@ class InstructionLDX(Processor):
 class InstructionLDY(Processor):
     """ LDY - Load Y with Memory
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA0, data[0]]
-
-        c = super().create(data=data, program=program)
-
-        self.assertEqual(c.r.y, 0x00)
-
-        return c
-
     def test_YRegister_Value_Has_Correct_Value(self):
         subtests = [
             (0x00,),
@@ -1760,7 +1478,7 @@ class InstructionLDY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0]])
 
                 c.step()
 
@@ -1775,7 +1493,7 @@ class InstructionLDY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0]])
 
                 c.step()
 
@@ -1788,7 +1506,7 @@ class InstructionLDY(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA0, data[0]])
 
                 c.step()
 
@@ -1798,18 +1516,6 @@ class InstructionLDY(Processor):
 class InstructionLSR(Processor):
     """ LSR - Logical Shift Right
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x4A]
-        c = super().create(data=data, program=program, condition=condition)
-
-        return c
-
     def test_Negative_Set_Correctly(self):
         subtests = [
             [0xFF, False, False],
@@ -1820,7 +1526,7 @@ class InstructionLSR(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 c = self.create(
-                    data,
+                    program=[0xA9, data[0], 0x4A],
                     condition=(0x38 if data[1] is True else 0x18)
                 )
 
@@ -1837,7 +1543,7 @@ class InstructionLSR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x4A])
 
                 c.step()
                 c.step()
@@ -1851,7 +1557,7 @@ class InstructionLSR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x4A])
 
                 c.step()
                 c.step()
@@ -1884,14 +1590,6 @@ class InstructionLSR(Processor):
 class InstructionORA(Processor):
     """ ORA - Bitwise OR Compare Memory with Accumulator
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x09, data[1]]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Accumulator_Correct(self):
         subtests = [
             [0x00, 0x00, 0x00],
@@ -1901,7 +1599,7 @@ class InstructionORA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x09, data[1]])
 
                 c.step()
                 c.step()
@@ -1916,7 +1614,7 @@ class InstructionORA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x09, data[1]])
 
                 c.step()
                 c.step()
@@ -1931,7 +1629,7 @@ class InstructionORA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x09, data[1]])
 
                 c.step()
                 c.step()
@@ -1943,7 +1641,7 @@ class InstructionPHA(Processor):
     """ PHA - Push Accumulator Onto Stack
     """
     def test_Stack_Has_Correct_Value(self):
-        c = self._cpu([0xA9, 0x03, 0x48])
+        c = self.create(program=[0xA9, 0x03, 0x48])
         stackLocation = c.r.s
 
         c.step()
@@ -1956,7 +1654,7 @@ class InstructionPHA(Processor):
         )
 
     def test_Stack_Pointer_Has_Correct_Value(self):
-        c = self._cpu([0xA9, 0x03, 0x48])
+        c = self.create(program=[0xA9, 0x03, 0x48])
         stackLocation = c.r.s
 
         c.step()
@@ -1966,7 +1664,7 @@ class InstructionPHA(Processor):
         self.assertEqual(c.r.s, stackLocation - 1)
 
     def test_Stack_Pointer_Has_Correct_Value_When_Wrapping(self):
-        c = self._cpu([0x9A, 0x48])
+        c = self.create(program=[0x9A, 0x48])
         stackLocation = c.r.s
 
         c.step()
@@ -1978,14 +1676,6 @@ class InstructionPHA(Processor):
 class InstructionPHP(Processor):
     """ PHP - Push Flags Onto Stack
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0x58, data[0], 0x08]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Stack_Set_Flag_Operations_Correctly(self):
         subtests = [
             [0x38, 0x31],  # SEC Carry Flag Test
@@ -1994,7 +1684,7 @@ class InstructionPHP(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0x58, data[0], 0x08])
                 stackLocation = c.r.s
 
                 c.step()
@@ -2029,7 +1719,7 @@ class InstructionPHP(Processor):
                 )
 
     def test_Stack_Pointer_Has_Correct_Value(self):
-        c = self._cpu(program=[0x08])
+        c = self.create(program=[0x08])
         stackLocation = c.r.s
 
         c.step()
@@ -2041,14 +1731,6 @@ class InstructionPHP(Processor):
 class InstructionPLA(Processor):
     """ PLA - Pull From Stack to Accumulator
     """
-    def create(self, data: tuple, program: list | None = None) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x48, 0x68]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Accumulator_Has_Correct_Value(self):
         subtests = [
             [0x03,]
@@ -2073,7 +1755,7 @@ class InstructionPLA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x48, 0x68])
 
                 c.step()
                 c.step()
@@ -2089,7 +1771,7 @@ class InstructionPLA(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x48, 0x68])
 
                 c.step()
                 c.step()
@@ -2159,18 +1841,6 @@ class InstructionPLP(Processor):
 class InstructionROL(Processor):
     """ ROL - Rotate Left
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [data[0], 0x2A]
-        c = super().create(data=data, program=program, condition=condition)
-
-        return c
-
     def test_Negative_Set_Correctly(self):
         subtests = [
             [0x40, True],
@@ -2179,7 +1849,7 @@ class InstructionROL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=0xA9)
+                c = self.create(program=[data[0], 0x2A], condition=0xA9)
 
                 c.step()
                 c.step()
@@ -2193,7 +1863,7 @@ class InstructionROL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[data[0], 0x2A])
 
                 c.step()
                 c.step()
@@ -2207,7 +1877,7 @@ class InstructionROL(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=0xA9)
+                c = self.create(program=[data[0], 0x2A], condition=0xA9)
 
                 c.step()
                 c.step()
@@ -2226,7 +1896,7 @@ class InstructionROL(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], data[0], data[3]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2243,23 +1913,6 @@ class InstructionROL(Processor):
 class InstructionROR(Processor):
     """ ROR - Rotate Left
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x6A]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_Negative_Set_Correctly(self):
         subtests = [
             [0xFF, 0x18, False],
@@ -2269,7 +1922,10 @@ class InstructionROR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[1])
+                c = self.create(
+                    program=[0xA9, data[0], 0x6A],
+                    condition=data[1]
+                )
 
                 c.step()
                 c.step()
@@ -2286,7 +1942,10 @@ class InstructionROR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[1])
+                c = self.create(
+                    program=[0xA9, data[0], 0x6A],
+                    condition=data[1]
+                )
 
                 c.step()
                 c.step()
@@ -2301,7 +1960,7 @@ class InstructionROR(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0x6A])
 
                 c.step()
                 c.step()
@@ -2337,26 +1996,8 @@ class InstructionROR(Processor):
 class InstructionRTI(Processor):
     """ RTI - Return from Interrupt
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0x48, 0x40]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition,
-        )
-
-        return c
-
     def test_Program_Counter_Correct(self):
-        c = self._cpu()
-        c.r.pc = 0xABCD
+        c = self.create(pc=0xABCD)
 
         # The Reset Vector Points to 0x0000 by default,
         # so load the RTI instruction there.
@@ -2369,7 +2010,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.pc, 0xABCF)
 
     def test_Carry_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.C.value,])
+        p = [0xA9, FlagBit.C.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2378,7 +2020,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
     def test_Zero_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.Z.value,])
+        p = [0xA9, FlagBit.Z.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2387,7 +2030,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.Z), True)
 
     def test_Decimal_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.D.value,])
+        p = [0xA9, FlagBit.D.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2396,7 +2040,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.D), True)
 
     def test_Interrupt_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.I.value,])
+        p = [0xA9, FlagBit.I.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2405,7 +2050,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.I), True)
 
     def test_Overflow_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.V.value,])
+        p = [0xA9, FlagBit.V.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2414,7 +2060,8 @@ class InstructionRTI(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.V), True)
 
     def test_Negative_Flag_Set_Correctly(self):
-        c = self.create([FlagBit.N.value,])
+        p = [0xA9, FlagBit.N.value, 0x48, 0x40]
+        c = self.create(program=p)
 
         c.step()
         c.step()
@@ -2448,21 +2095,10 @@ class InstructionRTS(Processor):
 class InstructionSBC(Processor):
     """ SBC - Subtraction With Borrow
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[0], 0xE9, data[1]]
+    def create(self, *args, **kwargs) -> CPU:
+        c = super().create(*args, **kwargs)
 
-        c = super().create(
-            data=data,
-            program=program,
-            condition=(0x38 if condition is True else None)
-        )
-        if condition:
+        if 'condition' in kwargs and kwargs['condition'] is not None:
             c.step()
 
         return c
@@ -2482,7 +2118,10 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0xE9, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2519,7 +2158,7 @@ class InstructionSBC(Processor):
                 c = self.create(
                     data,
                     program=p,
-                    condition=data[2]
+                    condition=(0x38 if data[2] is True else None)
                 )
 
                 self.assertEqual(
@@ -2558,7 +2197,10 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data, condition=data[2])
+                c = self.create(
+                    program=[0xA9, data[0], 0xE9, data[1]],
+                    condition=(0x38 if data[2] is True else None)
+                )
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2583,7 +2225,7 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xE9, data[1]])
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2606,7 +2248,7 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xE9, data[1]])
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2629,7 +2271,7 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xE9, data[1]])
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2652,7 +2294,7 @@ class InstructionSBC(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                c = self.create(program=[0xA9, data[0], 0xE9, data[1]])
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -2670,18 +2312,8 @@ class InstructionSBC(Processor):
 class InstructionSEC(Processor):
     """ SEC - Set Carry Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0x38]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Carry_Flag_Set_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0x38])
 
         c.step()
 
@@ -2691,18 +2323,8 @@ class InstructionSEC(Processor):
 class InstructionSED(Processor):
     """ SED - Set Decimal Mode
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xF8]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Decimal_Mode_Set_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0xF8])
 
         c.step()
 
@@ -2712,18 +2334,8 @@ class InstructionSED(Processor):
 class InstructionSEI(Processor):
     """ SEI - Set Interrup Flag
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0x78]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Interrupt_Flag_Set_Correctly(self):
-        c = self.create()
+        c = self.create(program=[0x78])
 
         c.step()
 
@@ -2733,18 +2345,8 @@ class InstructionSEI(Processor):
 class InstructionSTA(Processor):
     """ STA - Store Accumulator In Memory
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, 0x03, 0x85, 0x05]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Memory_Has_Correct_Value(self):
-        c = self.create()
+        c = self.create(program=[0xA9, 0x03, 0x85, 0x05])
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2757,18 +2359,8 @@ class InstructionSTA(Processor):
 class InstructionSTX(Processor):
     """ STX - Set Memory To X
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA2, 0x03, 0x86, 0x05]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Memory_Has_Correct_Value(self):
-        c = self.create()
+        c = self.create(program=[0xA2, 0x03, 0x86, 0x05])
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2781,18 +2373,8 @@ class InstructionSTX(Processor):
 class InstructionSTY(Processor):
     """ STY - Set Memory To Y
     """
-    def create(
-        self, data: tuple | None = None, program: list | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA0, 0x03, 0x84, 0x05]
-
-        c = super().create(data=data, program=program)
-
-        return c
-
     def test_Memory_Has_Correct_Value(self):
-        c = self.create()
+        c = self.create(program=[0xA0, 0x03, 0x84, 0x05])
 
         self.assertEqual(c.mmu.read(0x05), 0x00)
 
@@ -2805,33 +2387,17 @@ class InstructionSTY(Processor):
 class InstructionTAX(Processor):
     """ TAX, TAY, TSX, TSY Tests
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [data[2].value, data[1], data[0]]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_Transfer_Correct_Value_Set(self):
-        subtests = [
-            [0xAA, 0x03, RegisterMode.Accumulator, RegisterMode.XRegister],
-            [0xA8, 0x03, RegisterMode.Accumulator, RegisterMode.YRegister],
-            [0x8A, 0x03, RegisterMode.XRegister, RegisterMode.Accumulator],
-            [0x98, 0x03, RegisterMode.YRegister, RegisterMode.Accumulator],
+        subtests: list[tuple[int, int, RegisterMode, RegisterMode]] = [
+            (0xAA, 0x03, RegisterMode.Accumulator, RegisterMode.XRegister),
+            (0xA8, 0x03, RegisterMode.Accumulator, RegisterMode.YRegister),
+            (0x8A, 0x03, RegisterMode.XRegister, RegisterMode.Accumulator),
+            (0x98, 0x03, RegisterMode.YRegister, RegisterMode.Accumulator),
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [data[2].value, data[1], data[0]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2845,27 +2411,28 @@ class InstructionTAX(Processor):
                         self.assertEqual(c.r.y, data[1])
 
     def test_Transfer_Negative_Value_Set(self):
-        subtests = [
-            [0xAA, 0x80, RegisterMode.Accumulator, True],
-            [0xA8, 0x80, RegisterMode.Accumulator, True],
-            [0x8A, 0x80, RegisterMode.XRegister, True],
-            [0x98, 0x80, RegisterMode.YRegister, True],
-            [0xAA, 0xFF, RegisterMode.Accumulator, True],
-            [0xA8, 0xFF, RegisterMode.Accumulator, True],
-            [0x8A, 0xFF, RegisterMode.XRegister, True],
-            [0x98, 0xFF, RegisterMode.YRegister, True],
-            [0xAA, 0x7F, RegisterMode.Accumulator, False],
-            [0xA8, 0x7F, RegisterMode.Accumulator, False],
-            [0x8A, 0x7F, RegisterMode.XRegister, False],
-            [0x98, 0x7F, RegisterMode.YRegister, False],
-            [0xAA, 0x00, RegisterMode.Accumulator, False],
-            [0xA8, 0x00, RegisterMode.Accumulator, False],
-            [0x8A, 0x00, RegisterMode.XRegister, False],
-            [0x98, 0x00, RegisterMode.YRegister, False],
+        subtests: list[tuple[int, int, RegisterMode, bool]] = [
+            (0xAA, 0x80, RegisterMode.Accumulator, True),
+            (0xA8, 0x80, RegisterMode.Accumulator, True),
+            (0x8A, 0x80, RegisterMode.XRegister, True),
+            (0x98, 0x80, RegisterMode.YRegister, True),
+            (0xAA, 0xFF, RegisterMode.Accumulator, True),
+            (0xA8, 0xFF, RegisterMode.Accumulator, True),
+            (0x8A, 0xFF, RegisterMode.XRegister, True),
+            (0x98, 0xFF, RegisterMode.YRegister, True),
+            (0xAA, 0x7F, RegisterMode.Accumulator, False),
+            (0xA8, 0x7F, RegisterMode.Accumulator, False),
+            (0x8A, 0x7F, RegisterMode.XRegister, False),
+            (0x98, 0x7F, RegisterMode.YRegister, False),
+            (0xAA, 0x00, RegisterMode.Accumulator, False),
+            (0xA8, 0x00, RegisterMode.Accumulator, False),
+            (0x8A, 0x00, RegisterMode.XRegister, False),
+            (0x98, 0x00, RegisterMode.YRegister, False),
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [data[2].value, data[1], data[0]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2873,19 +2440,20 @@ class InstructionTAX(Processor):
                 self.assertEqual(c.r.getFlag(FlagBit.N), data[3])
 
     def test_Transfer_Zero_Value_Set(self):
-        subtests = [
-            [0xAA, 0xFF, RegisterMode.Accumulator, False],
-            [0xA8, 0xFF, RegisterMode.Accumulator, False],
-            [0x8A, 0xFF, RegisterMode.XRegister, False],
-            [0x98, 0xFF, RegisterMode.YRegister, False],
-            [0xAA, 0x00, RegisterMode.Accumulator, True],
-            [0xA8, 0x00, RegisterMode.Accumulator, True],
-            [0x8A, 0x00, RegisterMode.XRegister, True],
-            [0x98, 0x00, RegisterMode.YRegister, True],
+        subtests: list[tuple[int, int, RegisterMode, bool]] = [
+            (0xAA, 0xFF, RegisterMode.Accumulator, False),
+            (0xA8, 0xFF, RegisterMode.Accumulator, False),
+            (0x8A, 0xFF, RegisterMode.XRegister, False),
+            (0x98, 0xFF, RegisterMode.YRegister, False),
+            (0xAA, 0x00, RegisterMode.Accumulator, True),
+            (0xA8, 0x00, RegisterMode.Accumulator, True),
+            (0x8A, 0x00, RegisterMode.XRegister, True),
+            (0x98, 0x00, RegisterMode.YRegister, True),
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [data[2].value, data[1], data[0]]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2896,25 +2464,8 @@ class InstructionTAX(Processor):
 class InstructionTSX(Processor):
     """ TSX - Transfer Stack Pointer to X Register
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA2, data[0], 0x9A, 0xBA]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_XRegister_Set_Correctly(self):
-        c = self.create([], program=[0xBA])
+        c = self.create(program=[0xBA])
 
         stackPointer = c.r.s
         c.step()
@@ -2930,7 +2481,8 @@ class InstructionTSX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA2, data[0], 0x9A, 0xBA]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2946,7 +2498,8 @@ class InstructionTSX(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA2, data[0], 0x9A, 0xBA]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2958,23 +2511,6 @@ class InstructionTSX(Processor):
 class InstructionTXS(Processor):
     """ TXS - Transfer X Register to Stack Pointer
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA2, data[0], 0x9A]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_Stack_Pointer_Set_Correctly(self):
         subtests = [
             [0xAA,],
@@ -2983,7 +2519,8 @@ class InstructionTXS(Processor):
         ]
         for data in subtests:
             with self.subTest(data=data):
-                c = self.create(data)
+                p = [0xA2, data[0], 0x9A]
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -2994,23 +2531,6 @@ class InstructionTXS(Processor):
 class AccumulatorAddress(Processor):
     """ Accumulator Address Tests
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None,
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[1], data[0], 0x00]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_Immediate_Mode_Accumulator_Has_Correct_Result(self):
         subtests = [
             [0x69, 0x01, 0x01, 0x02],  # ADC
@@ -3023,7 +2543,7 @@ class AccumulatorAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], data[0], data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -3042,7 +2562,7 @@ class AccumulatorAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], data[0], 0x05, 0x00, data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -3064,7 +2584,7 @@ class AccumulatorAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], 0xA2, 0x01, data[0], 0x06, 0x00, data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3086,7 +2606,7 @@ class AccumulatorAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [0xA9, data[1], data[0], 0x06, 0x00, 0x00, data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3119,7 +2639,7 @@ class AccumulatorAddress(Processor):
                 else:
                     p += [0x01, data[0], 0x07, 0x00, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3153,7 +2673,7 @@ class AccumulatorAddress(Processor):
                 else:
                     p += [0x01, data[0], 0x07, 0x00, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3187,7 +2707,7 @@ class AccumulatorAddress(Processor):
                 else:
                     p += [0x01, 0x06, 0x09, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3222,7 +2742,7 @@ class AccumulatorAddress(Processor):
                 else:
                     p += [0x01, data[0], 0x07, 0x00, 0x08, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3236,23 +2756,6 @@ class AccumulatorAddress(Processor):
 class IndexAddress(Processor):
     """ Index Address Tests
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[1], data[0], 0x00]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_ZeroPage_Mode_Index_Has_Correct_Result(self):
         subtests = [
             [0xA6, 0x03, True],  # LDX Zero Page
@@ -3263,7 +2766,7 @@ class IndexAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [data[0], 0x03, 0x00, data[1]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3286,7 +2789,7 @@ class IndexAddress(Processor):
                 else:
                     p = [0xA2, 0xFF, data[0], 0x06, 0x00, data[1]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3306,7 +2809,7 @@ class IndexAddress(Processor):
         for data in subtests:
             with self.subTest(data=data):
                 p = [data[0], 0x04, 0x00, 0x00, data[1]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3321,33 +2824,16 @@ class IndexAddress(Processor):
 class CompareAddress(Processor):
     """ Compare Address Tests
     """
-    def create(
-        self,
-        data: tuple,
-        program: list | None = None,
-        condition: int | None = None
-    ) -> CPU:
-        if program is None:
-            program = [0xA9, data[1], data[0], 0x00]
-
-        c = super().create(
-            data=data,
-            program=program,
-            condition=condition
-        )
-
-        return c
-
     def test_Immediate_Mode_Compare_Operation_Has_Correct_Result(self):
-        subtests = [
-            [0xC9, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Immediate
-            [0xE0, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Immediate
-            [0xC0, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Immediate
+        subtests: list[tuple[int, int, int, RegisterMode]] = [
+            (0xC9, 0xFF, 0x00, RegisterMode.Accumulator),  # CMP Immediate
+            (0xE0, 0xFF, 0x00, RegisterMode.XRegister),  # CPX Immediate
+            (0xC0, 0xFF, 0x00, RegisterMode.YRegister),  # CPY Immediate
         ]
         for data in subtests:
             with self.subTest(data=data):
                 p = [data[3].value, data[1], data[0], data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -3357,16 +2843,16 @@ class CompareAddress(Processor):
                 self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
     def test_ZeroPage_Modes_Compare_Operation_Has_Correct_Result(self):
-        subtests = [
-            [0xC5, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Zero Page
-            [0xD5, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Zero Page X
-            [0xE4, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Zero Page
-            [0xC4, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Zero Page
+        subtests: list[tuple[int, int, int, RegisterMode]] = [
+            (0xC5, 0xFF, 0x00, RegisterMode.Accumulator),  # CMP Zero Page
+            (0xD5, 0xFF, 0x00, RegisterMode.Accumulator),  # CMP Zero Page X
+            (0xE4, 0xFF, 0x00, RegisterMode.XRegister),  # CPX Zero Page
+            (0xC4, 0xFF, 0x00, RegisterMode.YRegister),  # CPY Zero Page
         ]
         for data in subtests:
             with self.subTest(data=data):
                 p = [data[3].value, data[1], data[0], 0x04, data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 self.assertEqual(c.r.a, 0x00)
 
@@ -3378,16 +2864,16 @@ class CompareAddress(Processor):
                 self.assertEqual(c.r.getFlag(FlagBit.C), True)
 
     def test_Absolute_Modes_Compare_Operation_Has_Correct_Result(self):
-        subtests = [
-            [0xCD, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Absolute
-            [0xDD, 0xFF, 0x00, RegisterMode.Accumulator],  # CMP Absolute X
-            [0xEC, 0xFF, 0x00, RegisterMode.XRegister],  # CPX Absolute
-            [0xCC, 0xFF, 0x00, RegisterMode.YRegister],  # CPY Absolute
+        subtests: list[tuple[int, int, int, RegisterMode]] = [
+            (0xCD, 0xFF, 0x00, RegisterMode.Accumulator),  # CMP Absolute
+            (0xDD, 0xFF, 0x00, RegisterMode.Accumulator),  # CMP Absolute X
+            (0xEC, 0xFF, 0x00, RegisterMode.XRegister),  # CPX Absolute
+            (0xCC, 0xFF, 0x00, RegisterMode.YRegister),  # CPY Absolute
         ]
         for data in subtests:
             with self.subTest(data=data):
                 p = [data[3].value, data[1], data[0], 0x05, 0x00, data[2]]
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -3409,7 +2895,7 @@ class CompareAddress(Processor):
                 else:
                     p += [0x01, 0x06, 0x09, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
                 self.assertEqual(c.r.a, 0x00)
 
                 c.step()
@@ -3433,7 +2919,7 @@ class CompareAddress(Processor):
                 else:
                     p += [0x01, 0x08, 0x00, data[2]]
 
-                c = self.create(data, program=p)
+                c = self.create(program=p)
 
                 c.step()
                 c.step()
@@ -3482,13 +2968,13 @@ class StoreInMemoryAddress(Processor):
     """ Store In Memory Address Tests
     """
     def test_ZeroPage_Mode_Memory_Has_Correct_Result(self):
-        subtests = [
-            [0x85, RegisterMode.Accumulator],  # STA Zero Page
-            [0x95, RegisterMode.Accumulator],  # STA Zero Page X
-            [0x86, RegisterMode.XRegister],  # STX Zero Page
-            [0x96, RegisterMode.XRegister],  # STX Zero Page Y
-            [0x84, RegisterMode.YRegister],  # STY Zero Page
-            [0x94, RegisterMode.YRegister],  # STY Zero Page X
+        subtests: list[tuple[int, RegisterMode]] = [
+            (0x85, RegisterMode.Accumulator),  # STA Zero Page
+            (0x95, RegisterMode.Accumulator),  # STA Zero Page X
+            (0x86, RegisterMode.XRegister),  # STX Zero Page
+            (0x96, RegisterMode.XRegister),  # STX Zero Page Y
+            (0x84, RegisterMode.YRegister),  # STY Zero Page
+            (0x94, RegisterMode.YRegister),  # STY Zero Page X
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -3502,12 +2988,12 @@ class StoreInMemoryAddress(Processor):
                 self.assertEqual(c.mmu.read(0x04), 0x05)
 
     def test_Absolute_Mode_Memory_Has_Correct_Result(self):
-        subtests = [
-            [0x8D, 0x03, RegisterMode.Accumulator],  # STA Absolute
-            [0x9D, 0x03, RegisterMode.Accumulator],  # STA Absolute X
-            [0x99, 0x03, RegisterMode.Accumulator],  # STA Absolute X
-            [0x8E, 0x03, RegisterMode.XRegister],  # STX Zero Page
-            [0x8C, 0x03, RegisterMode.YRegister],  # STY Zero Page
+        subtests: list[tuple[int, int, RegisterMode]] = [
+            (0x8D, 0x03, RegisterMode.Accumulator),  # STA Absolute
+            (0x9D, 0x03, RegisterMode.Accumulator),  # STA Absolute X
+            (0x99, 0x03, RegisterMode.Accumulator),  # STA Absolute X
+            (0x8E, 0x03, RegisterMode.XRegister),  # STX Zero Page
+            (0x8C, 0x03, RegisterMode.YRegister),  # STY Zero Page
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -3746,27 +3232,27 @@ class Cycle(Processor):
             [0x7A, 2],  # NOP Implied
             [0xDA, 2],  # NOP Implied
             [0xFA, 2],  # NOP Implied
-            [0x80, 2],  # DOP Immediate
-            [0x82, 2],  # DOP Immediate
-            [0x89, 2],  # DOP Immediate
-            [0xC2, 2],  # DOP Immediate
-            [0xE2, 2],  # DOP Immediate
-            [0x0C, 4],  # TOP Absolute
-            [0x04, 3],  # DOP Zero Page
-            [0x44, 3],  # DOP Zero Page
-            [0x64, 3],  # DOP Zero Page
-            [0x14, 4],  # DOP Zero Page X
-            [0x34, 4],  # DOP Zero Page X
-            [0x54, 4],  # DOP Zero Page X
-            [0x74, 4],  # DOP Zero Page X
-            [0xD4, 4],  # DOP Zero Page X
-            [0xF4, 4],  # DOP Zero Page X
-            [0x1C, 4],  # TOP Absolute X
-            [0x3C, 4],  # TOP Absolute X
-            [0x5C, 4],  # TOP Absolute X
-            [0x7C, 4],  # TOP Absolute X
-            [0xDC, 4],  # TOP Absolute X
-            [0xFC, 4],  # TOP Absolute X
+            [0x80, 2],  # NOP Immediate   (SKB)
+            [0x82, 2],  # NOP Immediate   (SKB)
+            [0x89, 2],  # NOP Immediate   (SKB)
+            [0xC2, 2],  # NOP Immediate   (SKB)
+            [0xE2, 2],  # NOP Immediate   (SKB)
+            [0x04, 3],  # NOP Zero Page   (IGN)
+            [0x44, 3],  # NOP Zero Page   (IGN)
+            [0x64, 3],  # NOP Zero Page   (IGN)
+            [0x14, 4],  # NOP Zero Page X (IGN)
+            [0x34, 4],  # NOP Zero Page X (IGN)
+            [0x54, 4],  # NOP Zero Page X (IGN)
+            [0x74, 4],  # NOP Zero Page X (IGN)
+            [0xD4, 4],  # NOP Zero Page X (IGN)
+            [0xF4, 4],  # NOP Zero Page X (IGN)
+            [0x0C, 4],  # NOP Absolute    (IGN)
+            [0x1C, 4],  # NOP Absolute X  (IGN)
+            [0x3C, 4],  # NOP Absolute X  (IGN)
+            [0x5C, 4],  # NOP Absolute X  (IGN)
+            [0x7C, 4],  # NOP Absolute X  (IGN)
+            [0xDC, 4],  # NOP Absolute X  (IGN)
+            [0xFC, 4],  # NOP Absolute X  (IGN)
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -4244,6 +3730,100 @@ class ProgramCounter(Processor):
             [0x8A, 1],  # TXA Implied
             [0x9A, 1],  # TXS Implied
             [0x98, 1],  # TYA Implied
+            # Illegal Instructions
+            [0x0B, 2],  # AAC Immediate
+            [0x87, 2],  # AAX Zero Page
+            [0x97, 2],  # AAX Zero Page Y
+            [0x8F, 3],  # AAX Absolute
+            [0x83, 2],  # AAX Indirect X
+            [0x6B, 2],  # ARR Immediate
+            [0x4B, 2],  # ASR Immediate
+            [0xAB, 2],  # ATX Immediate
+            [0x9F, 3],  # AXA Absolute Y
+            [0x93, 2],  # AXA Indirect Y
+            [0xCB, 2],  # AXS Immediate
+            [0xC7, 2],  # DCP Zero Page
+            [0xD7, 2],  # DCP Zero Page X
+            [0xCF, 3],  # DCP Absolute
+            [0xDF, 3],  # DCP Absolute X
+            [0xDB, 3],  # DCP Absolute Y
+            [0xC3, 2],  # DCP Indirect X
+            [0xD3, 2],  # DCP Indirect Y
+            [0xE7, 2],  # ISC Zero Page
+            [0xF7, 2],  # ISC Zero Page X
+            [0xEF, 3],  # ISC Absolute
+            [0xFF, 3],  # ISC Absolute X
+            [0xFB, 3],  # ISC Absolute Y
+            [0xE3, 2],  # ISC Indirect X
+            [0xF3, 2],  # ISC Indirect Y
+            # [0x, ], # KIL Immediate (Untestable)
+            [0xBB, 3],  # LAR Absolute Y
+            [0xA7, 2],  # LAX Zero Page
+            [0xB7, 2],  # LAX Zero Page Y
+            [0xAF, 3],  # LAX Absolute
+            [0xBF, 3],  # LAX Absolute Y
+            [0xA3, 2],  # LAX Indirect X
+            [0xB3, 2],  # LAX Indirect Y
+            [0x27, 2],  # RLA Zero Page
+            [0x37, 2],  # RLA Zero Page X
+            [0x2F, 3],  # RLA Absolute
+            [0x3F, 3],  # RLA Absolute X
+            [0x3B, 3],  # RLA Absolute Y
+            [0x23, 2],  # RLA Indirect X
+            [0x33, 2],  # RLA Indirect Y
+            [0x67, 2],  # RRA Zero Page
+            [0x77, 2],  # RRA Zero Page X
+            [0x6F, 3],  # RRA Absolute
+            [0x7F, 3],  # RRA Absolute X
+            [0x7B, 3],  # RRA Absolute Y
+            [0x63, 2],  # RRA Indirect X
+            [0x73, 2],  # RRA Indirect Y
+            [0xEB, 2],  # USBC Immediate (SBC)
+            [0x07, 2],  # SLO Zero Page
+            [0x17, 2],  # SLO Zero Page X
+            [0x0F, 3],  # SLO Absolute
+            [0x1F, 3],  # SLO Absolute X
+            [0x1B, 3],  # SLO Absolute Y
+            [0x03, 2],  # SLO Indirect X
+            [0x13, 2],  # SLO Indirect Y
+            [0x47, 2],  # SRE Zero Page
+            [0x57, 2],  # SRE Zero Page X
+            [0x4F, 3],  # SRE Absolute
+            [0x5F, 3],  # SRE Absolute X
+            [0x5B, 3],  # SRE Absolute Y
+            [0x43, 2],  # SRE Indirect X
+            [0x53, 2],  # SRE Indirect Y
+            [0x9E, 3],  # SXA Absolute Y
+            [0x9C, 3],  # SYA Absolute X
+            [0x8B, 2],  # XAA Immediate
+            [0x9B, 3],  # XAS Absolute Y
+            [0x1A, 1],  # NOP Implied
+            [0x3A, 1],  # NOP Implied
+            [0x5A, 1],  # NOP Implied
+            [0x7A, 1],  # NOP Implied
+            [0xDA, 1],  # NOP Implied
+            [0xFA, 1],  # NOP Implied
+            [0x80, 2],  # NOP Immediate   (SKB)
+            [0x82, 2],  # NOP Immediate   (SKB)
+            [0x89, 2],  # NOP Immediate   (SKB)
+            [0xC2, 2],  # NOP Immediate   (SKB)
+            [0xE2, 2],  # NOP Immediate   (SKB)
+            [0x04, 2],  # NOP Zero Page   (IGN)
+            [0x44, 2],  # NOP Zero Page   (IGN)
+            [0x64, 2],  # NOP Zero Page   (IGN)
+            [0x14, 2],  # NOP Zero Page X (IGN)
+            [0x34, 2],  # NOP Zero Page X (IGN)
+            [0x54, 2],  # NOP Zero Page X (IGN)
+            [0x74, 2],  # NOP Zero Page X (IGN)
+            [0xD4, 2],  # NOP Zero Page X (IGN)
+            [0xF4, 2],  # NOP Zero Page X (IGN)
+            [0x0C, 3],  # NOP Absolute    (IGN)
+            [0x1C, 3],  # NOP Absolute X  (IGN)
+            [0x3C, 3],  # NOP Absolute X  (IGN)
+            [0x5C, 3],  # NOP Absolute X  (IGN)
+            [0x7C, 3],  # NOP Absolute X  (IGN)
+            [0xDC, 3],  # NOP Absolute X  (IGN)
+            [0xFC, 3],  # NOP Absolute X  (IGN)
         ]
         for data in subtests:
             with self.subTest(data=data):
@@ -4286,6 +3866,8 @@ class ProgramCounter(Processor):
                 c = self.create(
                     program=[0xA9, (0x00 if data[1] else 0x01), data[0]]
                 )
+
+                self.assertEqual(c.r.pc, 0x0000)
 
                 c.step()
                 currentProgramCounter = c.r.pc

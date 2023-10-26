@@ -8,5 +8,8 @@
     ],
     "python.testing.unittestEnabled": true,
     "python.testing.pytestEnabled": false,
-    "editor.rulers": [79]
+    "editor.rulers": [
+        79
+    ],
+    "esbonio.sphinx.confDir": ""
 }

@@ -1,5 +1,18 @@
+[build-system]
+requires        = ["setuptools>=61.0.0", "wheel"]
+build-backend   = "setuptools.build_meta"
+
 [bdist_wheel]
 universal = 1
+
+[tool.mypy]
+pretty = 1
+check_untyped_defs = 1
+#warn_return_any = 1
+#warn_unused_configs = 1
+exclude = '''(?x)(
+    ^docs/[\w]+\.py$
+)'''
 
 [project]
 name = "py65emu"
@@ -8,28 +21,35 @@ authors = [
     { name = "Jonas Marklén", email = "txc@txc.se" }
 ]
 license = { text = "WTFPL" }
-description = "A 6502 Emulator"
+description = "Python 6502 Emulator"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "requests >= 2.31.0",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/TXC/py65emu"
 
 [project.optional-dependencies]
-docs = ['Sphinx>=1.0', 'sphinx_rtd_theme',]
+dev = [
+    "black>=23.10",
+    "coverage>=7.3",
+    "flake8>=6.1",
+    "mypy>=1.6",
+    "pytest>=7.4",
+    "tox>=4.11",
+    "virtualenv>=20.24",
+]
+docs = [
+    'Sphinx>=1.0',
+    'sphinx_rtd_theme>=1.3',
+    'tomli>=2.0',
+]

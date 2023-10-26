@@ -31,6 +31,10 @@ class Disassembly:
         self.hi = hi
         self.lo = lo
 
+    def as_word(self) -> int:
+        """Returns hi & lo byte as word (16 bit)"""
+        return (self.hi << 8) + self.lo
+
     @property
     def memory(self) -> str:
         """
@@ -55,13 +59,13 @@ class Disassembly:
             case "a":
                 return prefix + f"${self.hi:0>2x}{self.lo:0>2x} "
             case "ax":
-                addr = (self.hi << 8) + self.lo + self.op.cpu.r.x
+                addr = self.as_word() + self.op.cpu.r.x
                 return prefix + (
                     f"${self.hi:0>2x}{self.hi:0>2x}, "
                     f"X [${addr:0>4x}]"
                 )
             case "ay":
-                addr = (self.hi << 8) + self.lo + self.op.cpu.r.y
+                addr = self.as_word() + self.op.cpu.r.y
                 return prefix + (
                     f"${self.hi:0>2x}{self.lo:0>2x}, "
                     f"Y [${addr:0>4x}]"
@@ -70,16 +74,10 @@ class Disassembly:
                 return prefix + f"(${self.hi:0>2x}{self.lo:0>2x}) "
             case "ix":
                 loc_addr = self.lo + self.op.cpu.r.x
-                addr = (
-                    (self.op.cpu.mmu.read(loc_addr + 1) << 8) +
-                    self.op.cpu.mmu.read(loc_addr)
-                ) & 0xFFFF
+                addr = self.op.cpu.mmu.readWord(loc_addr) & 0xFFFF
                 return prefix + f"(${self.lo:0>2x}, X) [${addr:0>4x}]"
             case "iy":
-                loc_addr = (
-                    (self.op.cpu.mmu.read(self.lo + 1) << 8) +
-                    self.op.cpu.mmu.read(self.lo)
-                ) & 0xFFFF
+                loc_addr = self.op.cpu.mmu.readWord(self.lo) & 0xFFFF
                 addr = loc_addr + self.op.cpu.r.y
                 return prefix + f"(${self.lo:0>2x}), Y [${addr:0>4x}]"
             case "rel":
@@ -308,7 +306,7 @@ class Debug:
         :param pointer: Stack Pointer Location
         :type pointer: int | None
         """
-        if pointer == 0:
+        if not pointer:
             pointer = self.cpu.r.s
 
         self.memdump((self.cpu.stack_page * 0x100) + pointer)

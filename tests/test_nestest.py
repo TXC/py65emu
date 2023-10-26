@@ -48,8 +48,9 @@ class NesTestRom(unittest.TestCase):
         self.reg = self.load_nestest_log()
 
     def tearDown(self):
-        print("\n\nEXITING:", f"Cycles: {self.c.cc_total:d}\n\n")
+        # print("\n\nEXITING:", f"Cycles: {self.c.cc_total:d}\n\n")
         # Debug.crash_dump(self.c)
+        pass
 
     def load_cpu(self) -> "CPU":
         path = os.path.join(

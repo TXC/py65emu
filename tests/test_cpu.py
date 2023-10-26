@@ -429,7 +429,7 @@ class TestCPU(unittest.TestCase):
         c.execute([0x48])
         self.assertEqual(c.stackPop(), 0xCC)
 
-        c.r.p = 0b11111111
+        c.r.p = 0xFF
         c.execute([0x08])
         self.assertEqual(c.stackPop(), 0xFF)
 
@@ -438,10 +438,10 @@ class TestCPU(unittest.TestCase):
         c.execute([0x68])
         self.assertEqual(c.r.a, 0xDD)
 
-        c.r.p = 0b00100000
+        c.r.p = 0x20
         c.stackPush(0xFD)
         c.execute([0x28])
-        self.assertEqual(c.r.p, 0xFD)
+        self.assertEqual(c.r.p, 0xED)
 
     def test_rol(self):
         c = self._cpu(romInit=[0x00])

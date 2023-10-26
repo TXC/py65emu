@@ -329,6 +329,7 @@ class CPU:
         stack_page: int = 0x1,
         magic: int = 0xEE,
         disable_bcd: bool = False,
+        debug: bool = False,
     ):
         """
         Initialize CPU
@@ -377,6 +378,7 @@ class CPU:
             # if pc is none get the address from $FFFD,$FFFC
             pass
 
+        self.debug = debug
         self.opcodes = OpCodes(self)
         self.op = None
 
@@ -402,15 +404,18 @@ class CPU:
         opcode = self.nextByte()
         self.op = self.opcodes[opcode]
 
-        dasm = Disassembly(self.op, *self.op.get_operands())
+        if self.debug is True:
+            dasm = Disassembly(self.op, *self.op.get_operands())
 
         self.op.execute()
 
         self.cc += self.cc_extra
-        print(
-            f"{dasm!r: <44} {self.r!r: >44} "
-            f"C: {self.cc:d} TC: {self.cc_total:d}"
-        )
+
+        if self.debug is True:
+            print(
+                f"{dasm!r: <44} {self.r!r: >44} "
+                f"C: {self.cc:d} TC: {self.cc_total:d}"
+            )
         self.cc_total += self.cc
 
         self.handle_interrupt()
@@ -818,10 +823,12 @@ class CPU:
             0x1E, 0x1F, 0x3E, 0x3F, 0x5E, 0x5F, 0x7E,
             0x7F, 0x9D, 0x9F, 0xDE, 0xDF, 0xFE, 0xFF
         ]
-        if o & 0xFF00 != a & 0xFF00 and self.op.opcode not in special_op:
+        if o & 0xFF00 != a & 0xFF00 and (
+            self.op and self.op.opcode not in special_op
+        ):
             # self.cc += 1
             self.increment_extra_cycle()
-        elif self.op.opcode in special_op:
+        elif self.op and self.op.opcode in special_op:
             self.increment_cycle_count()
 
         return a & 0xFFFF
@@ -848,10 +855,12 @@ class CPU:
         a = o + self.r.y
 
         special_op = [0x1B, 0x3B, 0x5B, 0x7B, 0x99, 0xDB, 0xFB]
-        if o & 0xFF00 != a & 0xFF00 and self.op.opcode not in special_op:
+        if o & 0xFF00 != a & 0xFF00 and (
+            self.op and self.op.opcode not in special_op
+        ):
             # self.cc += 1
             self.increment_extra_cycle()
-        elif self.op.opcode in special_op:
+        elif self.op and self.op.opcode in special_op:
             self.increment_cycle_count()
 
         return a & 0xFFFF
@@ -935,10 +944,12 @@ class CPU:
         a = o + self.r.y
 
         special_op = [0x13, 0x33, 0x53, 0x73, 0x91, 0xD3, 0xF3]
-        if o & 0xFF00 != a & 0xFF00 and self.op.opcode not in special_op:
+        if o & 0xFF00 != a & 0xFF00 and (
+            self.op and self.op.opcode not in special_op
+        ):
             # self.cc += 1
             self.increment_extra_cycle()
-        elif self.op.opcode in special_op:
+        elif self.op and self.op.opcode in special_op:
             self.increment_cycle_count()
 
         return a & 0xFFFF
@@ -1547,7 +1558,8 @@ class CPU:
             **IGN - OPC (`$14`, `$34`, `$54`, `$74`, `$D4`, `$F4`)
             Address Mode: Zero Page, X
 
-        .. _CPU_unofficial_opcodes: https://www.nesdev.org/wiki/Programming_with_unofficial_opcodes
+        .. _CPU_unofficial_opcodes:
+            https://www.nesdev.org/wiki/Programming_with_unofficial_opcodes
 
         +-----------+---------------+
         | Function  | `N Z C I D V` |
@@ -2301,7 +2313,8 @@ class CPU:
            the equation, use either 0 as the operand or a
            value of `$FF` in the accumulator.
 
-        .. _6502_Opcode_8B_XAA_ANE: http://visual6502.org/wiki/index.php?title=6502_Opcode_8B_%28XAA,_ANE%29
+        .. _6502_Opcode_8B_XAA_ANE:
+            http://visual6502.org/wiki/index.php?title=6502_Opcode_8B_%28XAA,_ANE%29  # noqa E501
 
         +--------------------+---------------+
         | Function           | `N Z C I D V` |

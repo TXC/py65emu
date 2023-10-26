@@ -63,7 +63,6 @@ class Processor(unittest.TestCase):
         :param int | None condition: Instruction to prepend to program if set
         :param int pc: Program counter.
         """
-        print("\nINIT CPU\n")
         pc = 0x00
         program = []
 
@@ -97,6 +96,69 @@ class Initialization(Processor):
         self.assertEqual(c.r.getFlag(FlagBit.D), False)
         self.assertEqual(c.r.getFlag(FlagBit.V), False)
         self.assertEqual(c.r.getFlag(FlagBit.N), False)
+
+    def test_Processor_Status_Flags_Sets_And_Unsets_Correctly_Enum(self):
+        subtests = [
+            (FlagBit.C.name,),
+            (FlagBit.Z.name,),
+            (FlagBit.I.name,),
+            (FlagBit.D.name,),
+            (FlagBit.V.name,),
+            (FlagBit.N.name,),
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self._cpu()
+                c.r.p = 0x00
+                self.assertFalse(c.r.getFlag(data[0]))
+
+                c.r.setFlag(data[0])
+                self.assertTrue(c.r.getFlag(data[0]))
+
+                c.r.clearFlag(data[0])
+                self.assertFalse(c.r.getFlag(data[0]))
+
+    def test_Processor_Status_Flags_Sets_And_Unsets_Correctly_String(self):
+        subtests = [
+            (FlagBit.C.value,),
+            (FlagBit.Z.value,),
+            (FlagBit.I.value,),
+            (FlagBit.D.value,),
+            (FlagBit.V.value,),
+            (FlagBit.N.value,),
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self._cpu()
+                c.r.p = 0x00
+                self.assertFalse(c.r.getFlag(data[0]))
+
+                c.r.setFlag(data[0])
+                self.assertTrue(c.r.getFlag(data[0]))
+
+                c.r.clearFlag(data[0])
+                self.assertFalse(c.r.getFlag(data[0]))
+
+    def test_Processor_Status_Flags_Sets_And_Unsets_Correctly_Int(self):
+        subtests = [
+            (FlagBit.C,),
+            (FlagBit.Z,),
+            (FlagBit.I,),
+            (FlagBit.D,),
+            (FlagBit.V,),
+            (FlagBit.N,),
+        ]
+        for data in subtests:
+            with self.subTest(data=data):
+                c = self._cpu()
+                c.r.p = 0x00
+                self.assertFalse(c.r.getFlag(data[0]))
+
+                c.r.setFlag(data[0])
+                self.assertTrue(c.r.getFlag(data[0]))
+
+                c.r.clearFlag(data[0])
+                self.assertFalse(c.r.getFlag(data[0]))
 
     def test_Processor_Registers_Initialized_Correctly(self):
         c = self._cpu()
@@ -3579,11 +3641,13 @@ class Cycle(Processor):
                 c.step()
                 c.step()
                 c.step()
+                """
                 print(
                     f'${initialAddress:0>4x}',
                     f'${c.r.pc:0>4x}',
                     [f'{i:0>2x}' for i in p]
                 )
+                """
 
                 self.assertEqual(c.cc, data[1])
 

@@ -371,6 +371,7 @@ class CPU:
         self.trigger_nmi: bool = False
         self.trigger_irq: bool = False
         self._previous_interrupt: bool = False
+        self._interrupt: bool = False
 
         if pc:
             self.r.pc = pc
@@ -389,6 +390,7 @@ class CPU:
         self.trigger_nmi = False
         self.trigger_irq = False
         self._previous_interrupt = False
+        self._interrupt: bool = False
         self.op = None
         self.cc = 0
         self.cc_extra = 0
@@ -603,6 +605,11 @@ class CPU:
         :param int cycles: Number of cycles to increment with. (Default: 1)
         """
         self.cc = (self.cc + cycles) & 0xFF
+        self._previousInterrupt = self._interrupt
+        self._interrupt = (
+            self.trigger_nmi or
+            (self.trigger_irq and self.r.GetFlag(FlagBit.I) is False)
+        )
 
     def increment_extra_cycle(self, cycles: int = 1) -> None:
         """Add extra cycle to current operation"""

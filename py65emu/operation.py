@@ -111,9 +111,9 @@ class Operation:
         match self.mode:
             case "acc" | "imp":
                 return 1
-            case "im" | "z" | "zx" | "zy" | "ix" | "iz" | "rel":
+            case "im" | "z" | "zx" | "zy" | "ix" | "iy" | "rel":
                 return 2
-            case "a" | "ax" | "az" | "i":
+            case "a" | "ax" | "ay" | "i":
                 return 3
         return 255
 

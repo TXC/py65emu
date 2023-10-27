@@ -51,21 +51,21 @@ class Disassembly:
             case "z":
                 return prefix + f"${self.lo:0>2x} "
             case "zx":
-                addr = self.lo + self.op.cpu.r.x
+                addr = (self.lo + self.op.cpu.r.x) & 0xFFFF
                 return prefix + f"${self.lo:0>2x}, X [${addr:0>4x}]"
             case "zy":
-                addr = self.lo + self.op.cpu.r.y
+                addr = (self.lo + self.op.cpu.r.y) & 0xFFFF
                 return prefix + f"${self.lo:0>2x}, Y [${addr:0>4x}]"
             case "a":
                 return prefix + f"${self.hi:0>2x}{self.lo:0>2x} "
             case "ax":
-                addr = self.as_word() + self.op.cpu.r.x
+                addr = (self.as_word() + self.op.cpu.r.x) & 0xFFFF
                 return prefix + (
-                    f"${self.hi:0>2x}{self.hi:0>2x}, "
+                    f"${self.hi:0>2x}{self.lo:0>2x}, "
                     f"X [${addr:0>4x}]"
                 )
             case "ay":
-                addr = self.as_word() + self.op.cpu.r.y
+                addr = (self.as_word() + self.op.cpu.r.y) & 0xFFFF
                 return prefix + (
                     f"${self.hi:0>2x}{self.lo:0>2x}, "
                     f"Y [${addr:0>4x}]"
@@ -73,19 +73,18 @@ class Disassembly:
             case "i":
                 return prefix + f"(${self.hi:0>2x}{self.lo:0>2x}) "
             case "ix":
-                loc_addr = self.lo + self.op.cpu.r.x
+                loc_addr = (self.lo + self.op.cpu.r.x) & 0xFFFF
                 addr = self.op.cpu.mmu.readWord(loc_addr) & 0xFFFF
                 return prefix + f"(${self.lo:0>2x}, X) [${addr:0>4x}]"
             case "iy":
                 loc_addr = self.op.cpu.mmu.readWord(self.lo) & 0xFFFF
                 addr = loc_addr + self.op.cpu.r.y
                 return prefix + f"(${self.lo:0>2x}), Y [${addr:0>4x}]"
-            case "rel":
+            case _:  # Actually: self.op.mode == 'rel'
                 addr = (
                     (self.pc + 1) + self.op.cpu.fromTwosCom(self.lo)
                 ) & 0xFFFF
                 return prefix + f"${self.lo:0>2x} [${addr:0>4x}] "
-        return ""
 
     def __repr__(self) -> str:
         """Returns everything nicely formated"""
@@ -102,7 +101,6 @@ class Debug:
         """
         :param CPU cpu: The CPU object to debug
         """
-
         self.cpu = cpu
 
     def _get_assembly(self, addr: int) -> tuple[int, "Disassembly"]:
@@ -175,6 +173,23 @@ class Debug:
             memory.append(tuple(value))
         return memory
 
+    def _disassemble_params(
+        self, start: int | None = None, stop: int | None = None
+    ) -> tuple[int, int, int]:
+        if start is None:
+            start = self.cpu.r.pc - 10
+        if start < 0:
+            start = 0
+
+        addr = start & 0xFFFF
+
+        if stop is None:
+            stop = self.cpu.r.pc
+        if stop < start:
+            stop = start
+
+        return start, stop, addr
+
     def d(self, addr: int) -> None:
         """
         Shorthand method for print out dump of memory and disassembly for
@@ -187,7 +202,7 @@ class Debug:
         self.disassemble(addr)
 
     @staticmethod
-    def crash_dump(cpu: "CPU"):
+    def crash_dump(cpu: "CPU") -> None:
         """
         Static method to dump out backtrace of the program that was running
         """
@@ -212,15 +227,7 @@ class Debug:
         :type start: int | None
         :type stop: int | None
         """
-        if start is None:
-            start = self.cpu.r.pc - 10
-
-        addr = start & 0xFFFF
-
-        if stop is None:
-            stop = self.cpu.r.pc
-        if stop < start:
-            stop += start
+        start, stop, addr = self._disassemble_params(start, stop)
 
         print(
             "DISASSEMBLE: ${:0>4x} - ${:0>4x}\n"
@@ -232,7 +239,9 @@ class Debug:
             addr, obj = self._get_assembly(addr)
             print(f"{obj!r}")
 
-    def disassemble_list(self, start: int, stop: int) -> list[Disassembly]:
+    def disassemble_list(
+        self, start: int | None = None, stop: int | None = None
+    ) -> list[Disassembly]:
         """
         See :py:meth:`py65emu.debug.Debug.disassemble` for a more descriptive
         text
@@ -249,18 +258,13 @@ class Debug:
         :rtype: list[Disassembly]
         :return: A list of Disassembly objects
         """
-        addr = start & 0xFFFF
-
-        if stop is None:
-            stop = start
-        if stop < start:
-            stop += start
+        start, stop, addr = self._disassemble_params(start, stop)
 
         lines: list[Disassembly] = []
         while addr <= (stop & 0xFFFF):
             cur = addr
             addr, assembly = self._get_assembly(addr)
-            lines[cur] = assembly
+            lines.insert(cur, assembly)
         return lines
 
     """Memory methods."""
@@ -278,7 +282,7 @@ class Debug:
         """
         offset = None
         if stop is None:
-            offset = start - ((start & 0xFFF0) + 1)
+            offset = ((start | 0x000F) - ((start & 0xFFF0)) + 1)
             start = start & 0xFFF0
             stop = (start | 0x000F)
 
@@ -295,7 +299,6 @@ class Debug:
             print(output.format(*row))
 
         if offset is not None:
-            offset += 2
             print("".ljust((offset * 3) + 1, " ") + " ^^")
 
     def stackdump(self, pointer: int | None = None) -> None:

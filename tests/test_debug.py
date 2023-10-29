@@ -297,23 +297,21 @@ class TestDebug(BaseDebug):
             with self.subTest(data=data):
                 dbg = self._debug([data[0], data[1], data[2]])
 
-                start = 0x0000
-                stop = 0x000F
-                offset = start - ((start & 0xFFF0) + 1)
-                if offset <= 0:
-                    offset = 2
+                offset = 0x000F
+                offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)
 
-                t = self.memdump_str(start=start, data=data, suffix=True)
+                t = self.memdump_str(addr=(offset & 0xFFF0), data=data, suffix=True)
+
                 v = t.format(
-                    start=start,
-                    stop=stop,
+                    start=(offset & 0xFFF0),
+                    stop=(offset | 0x000F),
                     offset="",
-                    width=(offset * 3)
+                    width=(offset_width * 3)
                 )
                 with unittest.mock.patch(
                     'sys.stdout', new_callable=io.StringIO
                 ) as mock_stdout:
-                    dbg.memdump(start)
+                    dbg.memdump(offset)
                     self.assertIn(mock_stdout.getvalue().strip(), v)
 
     def test_stackdump(self):
@@ -324,7 +322,7 @@ class TestDebug(BaseDebug):
                 offset = 0x01FD
                 offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)
 
-                t = self.memdump_str(addr=0x01F0, data=[], suffix=True)
+                t = self.memdump_str(addr=(offset & 0xFFF0), data=[], suffix=True)
 
                 v = t.format(
                     start=(offset & 0xFFF0),

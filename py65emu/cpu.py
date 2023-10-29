@@ -404,6 +404,31 @@ class CPU:
         self.cc_extra = 0
 
         opcode = self.nextByte()
+        self._run_operation(opcode)
+
+    def execute(self, instruction: list[int]) -> None:
+        """
+        Execute a single instruction independent of the program in memory.
+        instruction is an array of bytes.
+
+        :param list[int] instruction: List of unsigned integers to execute
+        :rtype: None
+        :return: None
+        """
+        for i in instruction:
+            self.cc = 0
+            self.cc_extra = 0
+
+            self._run_operation(i)
+
+    def _run_operation(self, opcode: int) -> None:
+        """
+        Execute a single instruction.
+
+        :param list[int] instruction: List of unsigned integers to execute
+        :rtype: None
+        :return: None
+        """
         self.op = self.opcodes[opcode]
 
         if self.debug is True:
@@ -421,22 +446,6 @@ class CPU:
         self.cc_total += self.cc
 
         self.handle_interrupt()
-
-    def execute(self, instruction: list[int]) -> None:
-        """
-        Execute a single instruction independent of the program in memory.
-        instruction is an array of bytes.
-
-        :param list[int] instruction: List of unsigned integers to execute
-        :rtype: None
-        :return: None
-        """
-        self.cc = 0
-        self.cc_extra = 0
-        for i in instruction:
-            self.op = self.opcodes[i]
-            self.op.execute()
-            self.handle_interrupt()
 
     def handle_interrupt(self) -> None:
         """Handle interrupts (IRQ/NMI)"""

@@ -97,6 +97,24 @@ class TestMMU(unittest.TestCase):
             m.read(-1)
         with self.assertRaises(IndexError):
             m.read(128)
+        with self.assertRaises(IndexError):
+            b = m.getBlock(127)
+            _ = b[256]
+        with self.assertRaises(IndexError):
+            b = m.getBlock(127)
+            b[256] = 0
+        with self.assertRaises(IndexError):
+            b = m.getBlock(127)
+            b.get(256)
+        with self.assertRaises(IndexError):
+            b = m.getBlock(127)
+            b.set(256, 0)
+
+    def test_that_repr_is_strin(self):
+        m = MMU([(0, 128)])
+        b = m.getBlock(120)
+        s = repr(b)
+        self.assertIsInstance(s, str)
 
     def test_reset(self):
         m = MMU([(0, 16, True), (16, 16, False)])

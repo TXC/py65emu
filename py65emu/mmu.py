@@ -175,7 +175,7 @@ class MMU:
         start: int,
         length: int,
         readonly: bool = False,
-        value: list | tuple | io.IOBase | None = None,
+        value: list | tuple | io.BufferedIOBase | None = None,
         valueOffset: int = 0
     ) -> None:
         """
@@ -231,15 +231,6 @@ class MMU:
             for i in range(len(a)):
                 newBlock[i + valueOffset] = a[i]
                 # newBlock.set(i + valueOffset, a[i])
-        elif isinstance(value, io.TextIOBase):
-            i = 0
-            while True:
-                chr = value.read(1)
-                if not chr:
-                    break
-
-                newBlock[i + valueOffset] = ord(str(chr))
-                # newBlock.set(i + valueOffset, ord(a))
 
         self.blocks.append(newBlock)
 

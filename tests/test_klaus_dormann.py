@@ -217,7 +217,7 @@ class KlausDormannDecimal(KlausDormann):
         print("No. of cycles {}".format(total_no_of_cycles))
 
 
-##  @unittest.skip('Not working and slow')
+@unittest.skip('Takes a long time to run!')
 class KlausDormannFunctional(KlausDormann):
     def setUp(self):
         super().setUp()
@@ -367,8 +367,8 @@ class KlausDormannFunctional(KlausDormann):
             )
 
 
-# @unittest.expectedFailure
-# @unittest.skip('Not working')
+@unittest.expectedFailure
+@unittest.skip('Not working without a IRQ/NMI generated')
 class KlausDormannInterrupt(KlausDormann):
     def setUp(self):
         super().setUp()

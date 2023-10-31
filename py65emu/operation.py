@@ -108,14 +108,12 @@ class Operation:
 
         :meta private:
         """
-        match self.mode:
-            case "acc" | "imp":
-                return 1
-            case "im" | "z" | "zx" | "zy" | "ix" | "iy" | "rel":
-                return 2
-            case "a" | "ax" | "ay" | "i":
-                return 3
-        return 255
+        if self.mode in ['acc', 'imp']:
+            return 1
+        elif self.mode in ['im', 'z', 'zx', 'zy', 'ix', 'iy', 'rel']:
+            return 2
+        else:  # ['a', 'ax', 'ay', 'i']:
+            return 3
 
     @property
     def amode(self) -> str:
@@ -126,9 +124,6 @@ class Operation:
         """
         if self._type == "v":
             return self.mode
-
-        if self.mode in ["acc", "rel"]:
-            return "im_a"
 
         return "{}_a".format(self.mode)
 
@@ -184,15 +179,8 @@ class Operation:
                 return prefix + "($LL, X) "
             case "iy":
                 return prefix + "($LL), Y "
-            case "rel":
+            case _:  # Actually: self.mode == 'rel'
                 return prefix + "$BB [PC + $BB] "
-        return ""
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __int__(self) -> int:
-        return self.opcode
 
 
 class OpCodes:

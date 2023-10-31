@@ -217,7 +217,7 @@ class KlausDormannDecimal(KlausDormann):
         print("No. of cycles {}".format(total_no_of_cycles))
 
 
-@unittest.skip('Not working and slow')
+##  @unittest.skip('Not working and slow')
 class KlausDormannFunctional(KlausDormann):
     def setUp(self):
         super().setUp()
@@ -346,25 +346,29 @@ class KlausDormannFunctional(KlausDormann):
             0x3486: 0xF0,
         }
 
-        total_no_of_cycles = 0
-
+        self.c.debug = True
         while 1:
+            old_pc = self.c.r.pc
             self.c.step()
-            # total_no_of_cycles += self.c.cc
-            total_no_of_cycles += 1
 
             if self.c.r.pc in data:
                 self.assertEqual(self.c.r.a, data[self.c.r.pc])
 
+            self.assertNotEqual(
+                self.c.r.pc,
+                old_pc,
+                f'Catched Trap {old_pc:0<2x}'
+            )
+
             self.assertLess(
-                total_no_of_cycles,
-                0x262EE18,
+                self.c.cc_total,
+                0x262EE18,  # 40037912
                 "Maximum number of loops exceeded"
             )
 
 
-@unittest.expectedFailure
-@unittest.skip('Not working')
+# @unittest.expectedFailure
+# @unittest.skip('Not working')
 class KlausDormannInterrupt(KlausDormann):
     def setUp(self):
         super().setUp()
@@ -429,13 +433,18 @@ class KlausDormannInterrupt(KlausDormann):
             ):
                 self.c.interruptRequest()
 
+            old_pc = self.c.r.pc
             self.c.step()
-            # total_no_of_cycles += c.cc
-            total_no_of_cycles += 1
 
             if self.c.r.pc == 0x0700:
                 # Success
                 break
+
+            self.assertNotEqual(
+                self.c.r.pc,
+                old_pc,
+                f'Catched Trap {old_pc:0<2x}'
+            )
 
             self.assertLess(
                 total_no_of_cycles,

@@ -21,7 +21,7 @@ class TestCPU(unittest.TestCase):
         ram=(0, 0x200, False),
         rom=(0x1000, 0x100),
         romInit=None,
-        pc=0x1000
+        pc=0x1000,
     ):
         return CPU(MMU([ram, rom + (True, romInit)]), pc)
 

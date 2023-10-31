@@ -47,10 +47,12 @@ class BaseDebug(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _cpu(self, program=None, pc=0x0000) -> CPU:
+    def _cpu(self, program=None, pc=0x0000, *args, **kwargs) -> CPU:
         self.c = CPU(
             mmu=MMU([(0x0, 0x10000, False, program, pc)]),
             pc=pc,
+            *args,
+            **kwargs
         )
         self.c.r.a = 0xAA
         self.c.r.x = 0x01
@@ -58,7 +60,7 @@ class BaseDebug(unittest.TestCase):
 
         return self.c
 
-    def data_to_str(self, data: Sequence, pc: int | None = None) -> None:
+    def data_to_str(self, data: Sequence, pc: int | None = None) -> str:
         o = self.c.opcodes[data[0]]
         op = {
             "pc":     pc if pc is not None else self.c.r.pc,
@@ -82,6 +84,31 @@ class BaseDebug(unittest.TestCase):
         call = getattr(n[0], n[1])
         call()
         self.assertIn(mock_stdout.getvalue(), expected_output)
+
+    def test_debug_active(self):
+        # OPC   LO    HI
+        data = (0xEA, 'NOP')
+        c = self._cpu(program=[data[0],], debug=True)
+        expected_pc = (c.r.pc + 1)
+        expected = (
+            '${r.pc:0>4x} {data[0]:0>2x} 00 00 {data[1]:s}: '
+            '{data[1]: <24s} A: {r.a:0>2X} X: {r.x:0>2X} Y: {r.y:0>2X} '
+            'S: {r.s:0>2X} PC: {pc1:0>4X} P: {r.p:0>2X}'
+        )
+        v = expected.format(
+                data=data,
+                pc1=expected_pc,
+                r=c.r,
+            )
+
+        with unittest.mock.patch(
+            'sys.stdout', new_callable=io.StringIO
+        ) as mock_stdout:
+            c.step()
+            self.assertIn(
+                v,
+                mock_stdout.getvalue().strip(),
+            )
 
 
 class TestDisassembly(BaseDebug):
@@ -154,9 +181,9 @@ class TestDebug(BaseDebug):
     def memdump_str(
         self,
         addr: int,
-        data: list | None = None,
+        data: tuple[int, int, int, str] | None = None,
         suffix: bool = False
-    ) -> tuple[str, str]:
+    ) -> str:
         memory_prefix = (
             "MEMORY DUMP FOR: ${start:0>4x} - ${stop:0>4x}\n"
             "ADDR 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
@@ -167,7 +194,9 @@ class TestDebug(BaseDebug):
         res[0] = addr
         if data is not None and len(data) > 0:
             for k in range(3):
-                res[(k + 1)] = data[k]
+                val = data[k]
+                if type(val) is int:
+                    res[(k + 1)] = val
 
         row = "{:0>4x}"
         row += " {:0>2x}" * 16
@@ -300,7 +329,11 @@ class TestDebug(BaseDebug):
                 offset = 0x000F
                 offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)
 
-                t = self.memdump_str(addr=(offset & 0xFFF0), data=data, suffix=True)
+                t = self.memdump_str(
+                    addr=(offset & 0xFFF0),
+                    data=data,
+                    suffix=True
+                )
 
                 v = t.format(
                     start=(offset & 0xFFF0),
@@ -322,7 +355,10 @@ class TestDebug(BaseDebug):
                 offset = 0x01FD
                 offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)
 
-                t = self.memdump_str(addr=(offset & 0xFFF0), data=[], suffix=True)
+                t = self.memdump_str(
+                    addr=(offset & 0xFFF0),
+                    suffix=True
+                )
 
                 v = t.format(
                     start=(offset & 0xFFF0),

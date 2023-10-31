@@ -1580,7 +1580,7 @@ class CPU:
         +-----------+---------------+
         | Function  | `N Z C I D V` |
         +===========+===============+
-        | \         | `- - - - - -` |
+        |           | `- - - - - -` |
         +-----------+---------------+
 
         :param int _: Ignored
@@ -2301,7 +2301,7 @@ class CPU:
 
     def XAA(self, v: int) -> None:  # ANE
         """
-        \* AND X + AND oper
+        \\* AND X + AND oper
 
         .. important:: Illegal Opcode
 

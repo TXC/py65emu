@@ -47,11 +47,11 @@ class BaseDebug(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _cpu(self, program=None, pc=0x0000, *args, **kwargs) -> CPU:
+    def _cpu(self, program=None, pc=0x0000, **kwargs) -> CPU:
+
         self.c = CPU(
             mmu=MMU([(0x0, 0x10000, False, program, pc)]),
             pc=pc,
-            *args,
             **kwargs
         )
         self.c.r.a = 0xAA
@@ -112,8 +112,8 @@ class BaseDebug(unittest.TestCase):
 
 
 class TestDisassembly(BaseDebug):
-    def _dasm(self, *args) -> Disassembly:
-        self._cpu(*args)
+    def _dasm(self, **kwargs) -> Disassembly:
+        self._cpu(**kwargs)
         opc = self.c.nextByte()
         op = self.c.opcodes[opc]
 
@@ -123,7 +123,7 @@ class TestDisassembly(BaseDebug):
     def test_initialized_correct(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dasm = self._dasm([data[0], data[1], data[2]])
+                dasm = self._dasm(program=[data[0], data[1], data[2]])
 
                 self.assertIsInstance(dasm, Disassembly)
 
@@ -137,7 +137,7 @@ class TestDisassembly(BaseDebug):
     def test_as_word(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dasm = self._dasm([data[0], data[1], data[2]])
+                dasm = self._dasm(program=[data[0], data[1], data[2]])
                 dasm.lo = data[1]
                 dasm.hi = data[2]
 
@@ -149,7 +149,7 @@ class TestDisassembly(BaseDebug):
     def test_memory_string(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dasm = self._dasm([data[0], data[1], data[2]])
+                dasm = self._dasm(program=[data[0], data[1], data[2]])
 
                 self.assertEqual(dasm.op.opcode, data[0], f'0x{data[0]:0>2X}')
                 self.assertEqual(
@@ -161,7 +161,7 @@ class TestDisassembly(BaseDebug):
     def test_repr_string(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dasm = self._dasm([data[0], data[1], data[2]])
+                dasm = self._dasm(program=[data[0], data[1], data[2]])
 
                 self.assertEqual(dasm.op.opcode, data[0], f'0x{data[0]:0>2X}')
                 self.assertEqual(
@@ -172,8 +172,8 @@ class TestDisassembly(BaseDebug):
 
 
 class TestDebug(BaseDebug):
-    def _debug(self, *args) -> Debug:
-        self._cpu(*args)
+    def _debug(self, **kwargs) -> Debug:
+        self._cpu(**kwargs)
         debug = Debug(self.c)
 
         return debug
@@ -209,7 +209,7 @@ class TestDebug(BaseDebug):
     def test_initialized_correct(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                debug = self._debug([data[0], data[1], data[2]])
+                debug = self._debug(program=[data[0], data[1], data[2]])
 
                 self.assertIsInstance(debug, Debug)
                 self.assertIsInstance(debug.cpu, CPU)
@@ -217,7 +217,7 @@ class TestDebug(BaseDebug):
     def test_get_assembly(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
                 o = self.c.opcodes[data[0]]
 
                 bytes, dasm = dbg._get_assembly(self.c.r.pc)
@@ -241,7 +241,7 @@ class TestDebug(BaseDebug):
     def test_get_memory(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 memory = dbg._get_memory(0x0000, 0x0003)
                 mem = memory.pop()
@@ -254,7 +254,7 @@ class TestDebug(BaseDebug):
     def test_shorthand_d(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
                 self.c.r.pc = 0x0000
 
                 with unittest.mock.patch(
@@ -266,7 +266,7 @@ class TestDebug(BaseDebug):
     def test_crash_dump(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                cpu = self._cpu([data[0], data[1], data[2]])
+                cpu = self._cpu(program=[data[0], data[1], data[2]])
                 self.c.r.pc = 0x0000
 
                 v = 'DISASSEMBLE: $0000 - $0000\n'\
@@ -282,7 +282,7 @@ class TestDebug(BaseDebug):
     def test_disassemble(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 start = 0
                 stop = 0
@@ -298,7 +298,7 @@ class TestDebug(BaseDebug):
     def test_disassemble_with_negative_stop(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 start = 0
                 stop = 0
@@ -315,7 +315,7 @@ class TestDebug(BaseDebug):
     def test_disassemble_list(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 res = dbg.disassemble_list(0x0000, 0x0000)
                 self.assertIsInstance(res, list)
@@ -324,7 +324,7 @@ class TestDebug(BaseDebug):
     def test_memdump(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 offset = 0x000F
                 offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)
@@ -350,7 +350,7 @@ class TestDebug(BaseDebug):
     def test_stackdump(self):
         for data in self.subtests:
             with self.subTest(data=data):
-                dbg = self._debug([data[0], data[1], data[2]])
+                dbg = self._debug(program=[data[0], data[1], data[2]])
 
                 offset = 0x01FD
                 offset_width = ((offset | 0x000F) - ((offset & 0xFFF0)) + 1)

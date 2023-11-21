@@ -37,13 +37,15 @@ jobs:
           python -m pip install --upgrade build twine
 
       - name: Set Environment Variables
-        run: echo "GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
-#        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-#        git_branch=${GITHUB_REF#refs/heads/}
+        run: |
+          echo "GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+          echo "LAST_TAG=$(git rev-list --tags --no-walk --max-count=1) >> $GITHUB_ENV"
+          echo "COMMITS_SINCE_TAG=$(git rev-list $LAST_TAG..HEAD --count)"
 
       - name: Set Unique Version
         if: ${{ github.event.action != 'published' }}
-        run: sed -i -E "s/^version = \"([0-9\.]+)\"$/version = \"\1-$GIT_HASH\"/" pyproject.toml
+        #run: sed -i -E "s/^version = \"([0-9\.]+)\"$/version = \"\1-$GIT_HASH\"/" pyproject.toml
+        run: sed -i -E "s/^version = \"([0-9\.]+)\"$/version = \"\1-dev$COMMITS_SINCE_TAG\"/" pyproject.toml
 
       - name: Build package
         run: python -m build .

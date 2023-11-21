@@ -7,6 +7,11 @@ on:
   release:
     types:
       - published
+  workflow_run:
+    workflows: ["Tests"]
+    branches: [master]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -26,13 +31,26 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade build twine
+
+      - name: Set Environment Variables
+        run: echo "GIT_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+#        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+#        git_branch=${GITHUB_REF#refs/heads/}
+
+      - name: Set Unique Version
+        if: ${{ github.event.action != 'published' }}
+        run: sed -i -E "s/^version = \"([0-9\.]+)\"$/version = \"\1-$GIT_HASH\"/" pyproject.toml
+
       - name: Build package
         run: python -m build .
+
       - name: Check package
         run: python -m twine check dist/*
+
       - name: Archive artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -69,6 +87,12 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/py65emu
+
+    #env:
+    #  DV_NEW_VERSION: ""
+    #  DV_VERSION_BUMP: ""
+    #  DV_CURRENT_VERSION: ""
+    #  DV_DEV_VERSION: "False"
 
     steps:
       - name: Download package artifact

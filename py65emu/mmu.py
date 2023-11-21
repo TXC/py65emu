@@ -1,5 +1,6 @@
 import array
 import io
+from abc import ABC, abstractmethod
 from typing import Sequence
 
 
@@ -145,7 +146,58 @@ class Block:
         return self[addr - self.start]
 
 
-class MMU:
+class Memory(ABC):
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        In all writeable blocks reset all values to zero.
+        """
+        pass
+
+    @abstractmethod
+    def cpu_write(self, addr: int, value: int) -> None:
+        """
+        Write a value to the given address if it is writeable.
+
+        :param int index: Address/Position to write to
+        :param int value: Value to write
+        :raises ReadOnlyError: If block is readonly
+        :raises IndexError: If address is out of bounds for block
+        """
+        pass
+
+    def cpu_writeWord(self, addr: int, value: int) -> None:
+        """
+        Write a value to the given address if it is writeable.
+
+        :param int index: Address/Position to write to
+        :param int value: Value to write
+        :raises ReadOnlyError: If block is readonly
+        :raises IndexError: If address is out of bounds for block
+        """
+        self.cpu_write(addr, (value >> 8) & 0x00FF)
+        self.cpu_write(addr + 1, value & 0x00FF)
+
+    @abstractmethod
+    def cpu_read(self, addr: int) -> int:
+        """
+        Return the value at the address.
+
+        :param int index: Address to read from
+        :param int value: Value to write
+        :raises IndexError: If address is out of bounds for block
+        :rtype: int
+        :return: Value at address (8 bit)
+        """
+        pass
+
+    def cpu_readWord(self, addr: int) -> int:
+        low = self.cpu_read(addr)
+        high = self.cpu_read(addr + 1)
+        return (high << 8) + low
+
+
+class MMU(Memory):
     def __init__(self, blocks: Sequence[tuple] = []):
         """
         Initialize the MMU with the blocks specified in blocks.  blocks
@@ -220,7 +272,8 @@ class MMU:
         if (
             isinstance(value, list) or
             isinstance(value, tuple) or
-            isinstance(value, str)
+            isinstance(value, str) or
+            isinstance(value, array.array)
         ):
             for i in range(len(value)):
                 newBlock[i + valueOffset] = value[i]
@@ -247,7 +300,7 @@ class MMU:
 
         raise IndexError("Unable to locate position %{:0>4x}".format(addr))
 
-    def write(self, addr: int, value: int) -> None:
+    def cpu_write(self, addr: int, value: int) -> None:
         """
         Write a value to the given address if it is writeable.
 
@@ -259,7 +312,7 @@ class MMU:
         b = self.getBlock(addr)
         b.set(addr, value & 0xFF)
 
-    def read(self, addr: int) -> int:
+    def cpu_read(self, addr: int) -> int:
         """
         Return the value at the address.
 
@@ -271,14 +324,3 @@ class MMU:
         """
         b = self.getBlock(addr)
         return b.get(addr)
-
-    def readWord(self, addr: int) -> int:
-        """
-        Return the value at the address.
-
-        :param int index: Address to read from
-        :raises IndexError: If address is out of bounds for block
-        :rtype: int
-        :return: Value at address (16 bit)
-        """
-        return (self.read(addr + 1) << 8) + self.read(addr)

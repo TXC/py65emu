@@ -35,7 +35,7 @@ To use Python 6502 Emulator in a project
 >>>
 >>> print(c.r.getFlag('C')) # Get the value of a flag from the flag register.
 >>>
->>> print(mmu.read(0xff)) # Read a value from memory
+>>> print(mmu.cpu_readread(0xff)) # Read a value from memory
 
 The full set of parameters for CPU is
 

@@ -146,7 +146,7 @@
 			"        c.step()",
 			"        c.step()",
 			"",
-			"        self.assertEqual(${2|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${3|0,1,2,3,4|}])",
+			"        self.assertEqual(${2|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.cpu_read(),c.r.getFlag(FlagBit.U)|}, data[${3|0,1,2,3,4|}])",
 			"",
 		],
 		"description": "SubTest Stub"
@@ -155,7 +155,7 @@
 		"scope": "python",
 		"prefix": "assert",
 		"body": [
-			"self.assertEqual(${1|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.read(),c.r.getFlag(FlagBit.U)|}, data[${2|0,1,2,3,4|}])",
+			"self.assertEqual(${1|c.r.pc,c.r.a,c.r.x,c.r.y,c.r.s,c.mmu.cpu_read(),c.r.getFlag(FlagBit.U)|}, data[${2|0,1,2,3,4|}])",
 			"$0",
 		],
 		"description": "SubTest Stub"

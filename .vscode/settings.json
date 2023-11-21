@@ -12,7 +12,7 @@
     "editor.rulers": [
         79
     ],
-    "esbonio.sphinx.confDir": "${workspaceFolder}/docs/",
+    "esbonio.sphinx.confDir": "${workspaceFolder}/docs",
     "esbonio.sphinx.buildDir": "${workspaceFolder}/docs/_build/",
     "coverage-gutters.showGutterCoverage": false,
     "coverage-gutters.showLineCoverage": true,

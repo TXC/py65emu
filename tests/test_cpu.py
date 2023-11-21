@@ -116,13 +116,13 @@ class TestCPU(unittest.TestCase):
         self.assertEqual(c.i_a(), 0x0600)
 
         c.r.y = 0x05
-        c.mmu.write(0x00, 0x21)
-        c.mmu.write(0x01, 0x43)
+        c.mmu.cpu_write(0x00, 0x21)
+        c.mmu.cpu_write(0x01, 0x43)
         self.assertEqual(c.iy_a(), 0x4326)
 
         c.r.x = 0x02
-        c.mmu.write(0x02, 0x34)
-        c.mmu.write(0x03, 0x12)
+        c.mmu.cpu_write(0x02, 0x34)
+        c.mmu.cpu_write(0x03, 0x12)
         self.assertEqual(c.ix_a(), 0x1234)
 
     def test_stack(self):
@@ -193,13 +193,13 @@ class TestCPU(unittest.TestCase):
         c.execute([0x0A])
         self.assertEqual(c.r.a, 2)
 
-        c.mmu.write(0, 4)
+        c.mmu.cpu_write(0, 4)
         c.execute([0x06])
-        self.assertEqual(c.mmu.read(0), 8)
+        self.assertEqual(c.mmu.cpu_read(0), 8)
 
     def test_bit(self):
         c = self._cpu(romInit=[0x00, 0x00, 0x10])
-        c.mmu.write(0, 0xFF)
+        c.mmu.cpu_write(0, 0xFF)
         c.r.a = 1
 
         c.execute([0x24])  # Zero page
@@ -307,7 +307,7 @@ class TestCPU(unittest.TestCase):
     def test_dec(self):
         c = self._cpu(romInit=[0x00])
         c.execute([0xC6])
-        self.assertEqual(c.mmu.read(0x00), 0xFF)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0xFF)
 
     def test_dex(self):
         c = self._cpu()
@@ -353,7 +353,7 @@ class TestCPU(unittest.TestCase):
     def test_inc(self):
         c = self._cpu(romInit=[0x00])
         c.execute([0xE6])
-        self.assertEqual(c.mmu.read(0x00), 0x01)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0x01)
 
     def test_inx(self):
         c = self._cpu()
@@ -409,9 +409,9 @@ class TestCPU(unittest.TestCase):
         self.assertEqual(c.r.a, 0x00)
         self.assertTrue(c.r.getFlag(FlagBit.C))
 
-        c.mmu.write(0x00, 0x02)
+        c.mmu.cpu_write(0x00, 0x02)
         c.execute([0x46])
-        self.assertEqual(c.mmu.read(0x00), 0x01)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0x01)
 
     def test_ora(self):
         c = self._cpu(romInit=[0x0F, 0xF0, 0xFF])
@@ -455,7 +455,7 @@ class TestCPU(unittest.TestCase):
         self.assertTrue(c.r.getFlag(FlagBit.C))
 
         c.execute([0x26])
-        self.assertEqual(c.mmu.read(0x00), 0x01)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0x01)
         self.assertFalse(c.r.getFlag(FlagBit.C))
 
     def test_ror(self):
@@ -470,7 +470,7 @@ class TestCPU(unittest.TestCase):
         self.assertTrue(c.r.getFlag(FlagBit.C))
 
         c.execute([0x66])
-        self.assertEqual(c.mmu.read(0x00), 0x80)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0x80)
         self.assertFalse(c.r.getFlag(FlagBit.C))
 
     def test_rti(self):
@@ -577,19 +577,19 @@ class TestCPU(unittest.TestCase):
         c = self._cpu(romInit=[0x00])
         c.r.a = 0xF0
         c.execute([0x85])
-        self.assertEqual(c.mmu.read(0x00), 0xF0)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0xF0)
 
     def test_stx(self):
         c = self._cpu(romInit=[0x00])
         c.r.x = 0xF0
         c.execute([0x86])
-        self.assertEqual(c.mmu.read(0x00), 0xF0)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0xF0)
 
     def test_sty(self):
         c = self._cpu(romInit=[0x00])
         c.r.y = 0xF0
         c.execute([0x84])
-        self.assertEqual(c.mmu.read(0x00), 0xF0)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0xF0)
 
     def test_t(self):
         c = self._cpu()
@@ -639,7 +639,7 @@ class TestCPU(unittest.TestCase):
         c.r.a = 0xF0
         c.r.x = 0xF0
         c.execute([0x87])
-        self.assertEqual(c.mmu.read(0x00), 0xF0)
+        self.assertEqual(c.mmu.cpu_read(0x00), 0xF0)
 
     def test_arr(self):
         c = self._cpu(romInit=[0x80])
@@ -675,7 +675,7 @@ class TestCPU(unittest.TestCase):
         c.r.y = 0x01
         c.execute([0x9F])
 
-        self.assertEqual(c.mmu.read(0x200), 0x02)
+        self.assertEqual(c.mmu.cpu_read(0x200), 0x02)
 
     def test_axs(self):
         c = self._cpu(romInit=[0x02])
@@ -689,7 +689,7 @@ class TestCPU(unittest.TestCase):
         c = self._cpu(romInit=[0x01])
         c.r.a = 0xFF
         c.execute([0xC7])
-        self.assertEqual(c.mmu.read(0x01), 0xFF)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0xFF)
         self.assertTrue(c.r.getFlag(FlagBit.Z))
 
     def test_isc(self):
@@ -697,7 +697,7 @@ class TestCPU(unittest.TestCase):
         c.r.a = 0xFF
         c.r.setFlag(FlagBit.C)
         c.execute([0xE7])
-        self.assertEqual(c.mmu.read(0x01), 0x01)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0x01)
         self.assertEqual(c.r.a, 0xFE)
 
     def test_kil(self):
@@ -708,7 +708,7 @@ class TestCPU(unittest.TestCase):
     def test_lar(self):
         c = self._cpu(romInit=[0x01, 0x00])
         c.r.y = 0x01
-        c.mmu.write(0x02, 0xF0)
+        c.mmu.cpu_write(0x02, 0xF0)
 
         c.execute([0xBB])
         self.assertEqual(c.r.a, 0xF0)
@@ -717,45 +717,45 @@ class TestCPU(unittest.TestCase):
 
     def test_lax(self):
         c = self._cpu(romInit=[0x01])
-        c.mmu.write(0x01, 0xF0)
+        c.mmu.cpu_write(0x01, 0xF0)
         c.execute([0xA7])
         self.assertEqual(c.r.a, 0xF0)
         self.assertEqual(c.r.x, 0xF0)
 
     def test_rla(self):
         c = self._cpu(romInit=[0x01])
-        c.mmu.write(0x01, 0x01)
+        c.mmu.cpu_write(0x01, 0x01)
         c.r.a = 0x06
         c.r.setFlag(FlagBit.C)
         c.execute([0x27])
-        self.assertEqual(c.mmu.read(0x01), 0x03)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0x03)
         self.assertEqual(c.r.a, 0x02)
 
     def test_rra(self):
         c = self._cpu(romInit=[0x01])
-        c.mmu.write(0x01, 0x01)
+        c.mmu.cpu_write(0x01, 0x01)
         c.r.a = 0x06
         c.r.setFlag(FlagBit.C)
         c.execute([0x67])
-        self.assertEqual(c.mmu.read(0x01), 0x80)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0x80)
         self.assertEqual(c.r.a, 0x87)
 
     def test_rra2(self):
         c = self._cpu(romInit=[0x01])
-        c.mmu.write(0x01, 0x02)
+        c.mmu.cpu_write(0x01, 0x02)
         c.r.a = 0x06
         c.r.setFlag(FlagBit.C)
         c.execute([0x47])
-        self.assertEqual(c.mmu.read(0x01), 0x01)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0x01)
         self.assertEqual(c.r.a, 0x07)
 
     def test_slo(self):
         c = self._cpu(romInit=[0x01])
-        c.mmu.write(0x01, 0x01)
+        c.mmu.cpu_write(0x01, 0x01)
         c.r.a = 0x06
         c.r.setFlag(FlagBit.C)
         c.execute([0x07])
-        self.assertEqual(c.mmu.read(0x01), 0x02)
+        self.assertEqual(c.mmu.cpu_read(0x01), 0x02)
         self.assertEqual(c.r.a, 0x06)
 
     def test_sxa(self):
@@ -764,7 +764,7 @@ class TestCPU(unittest.TestCase):
         c.r.y = 0x01
         c.execute([0x9E])
 
-        self.assertEqual(c.mmu.read(0x200), 0x02)
+        self.assertEqual(c.mmu.cpu_read(0x200), 0x02)
 
     def test_sya(self):
         c = self._cpu(ram=(0, 0x400, False), romInit=[0xFF, 0x01])
@@ -773,7 +773,7 @@ class TestCPU(unittest.TestCase):
         c.r.x = 0x01
         c.execute([0x9C])
 
-        self.assertEqual(c.mmu.read(0x200), 0x02)
+        self.assertEqual(c.mmu.cpu_read(0x200), 0x02)
 
     def test_xaa(self):
         c = self._cpu(romInit=[0xFF])
@@ -795,7 +795,7 @@ class TestCPU(unittest.TestCase):
         c.execute([0x9B])
 
         self.assertEqual(c.r.s, 0x7E)
-        self.assertEqual(c.mmu.read(0x100), 0x02)
+        self.assertEqual(c.mmu.cpu_read(0x100), 0x02)
 
     def test_step(self):
         c = self._cpu(romInit=[0xA9, 0x55, 0x69, 0x22])

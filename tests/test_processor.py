@@ -165,7 +165,7 @@ class Initialization(Processor):
         self.assertEqual(c.r.a, 0)
         self.assertEqual(c.r.x, 0)
         self.assertEqual(c.r.y, 0)
-        self.assertEqual(c.mmu.read(c.r.pc), 0)
+        self.assertEqual(c.mmu.cpu_read(c.r.pc), 0)
         self.assertEqual(c.r.pc, 0)
 
     def test_ProgramCounter_Correct_When_Program_Loaded(self):
@@ -420,7 +420,7 @@ class InstructionASL(Processor):
                 if data[0] == 0x0A:
                     self.assertEqual(c.r.a, data[2])
                 else:
-                    self.assertEqual(c.mmu.read(data[3]), data[2])
+                    self.assertEqual(c.mmu.cpu_read(data[3]), data[2])
 
     def test_Carry_Set_Correctly(self):
         subtests = [
@@ -709,8 +709,8 @@ class InstructionBRK(Processor):
     def test_Program_Counter_Set_To_Address_At_Break_Vector_Address(self):
         c = self.create(program=[0x00], pc=0x1000)
 
-        c.mmu.write(0xFFFE, 0xBC)
-        c.mmu.write(0xFFFF, 0xCD)
+        c.mmu.cpu_write(0xFFFE, 0xBC)
+        c.mmu.cpu_write(0xFFFF, 0xCD)
 
         self.assertEqual(c.r.pc, 0x1000)
 
@@ -725,11 +725,11 @@ class InstructionBRK(Processor):
         c.step()
 
         self.assertEqual(
-            c.mmu.read(self.get_stack_location(stackLocation)),
+            c.mmu.cpu_read(self.get_stack_location(stackLocation)),
             0xAB
         )
         self.assertEqual(
-            c.mmu.read(self.get_stack_location(stackLocation - 1)),
+            c.mmu.cpu_read(self.get_stack_location(stackLocation - 1)),
             0xCF
         )
 
@@ -759,7 +759,7 @@ class InstructionBRK(Processor):
 
                 # Accounting for the Offset in memory
                 self.assertEqual(
-                    c.mmu.read(self.get_stack_location(stackLocation - 2)),
+                    c.mmu.cpu_read(self.get_stack_location(stackLocation - 2)),
                     data[1]
                 )
 
@@ -782,7 +782,7 @@ class InstructionBRK(Processor):
 
                 # Accounting for the Offset in memory
                 self.assertEqual(
-                    c.mmu.read(self.get_stack_location(stackLocation - 2)),
+                    c.mmu.cpu_read(self.get_stack_location(stackLocation - 2)),
                     data[2]
                 )
 
@@ -1052,7 +1052,7 @@ class InstructionDEC(Processor):
 
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x03), data[1])
+                self.assertEqual(c.mmu.cpu_read(0x03), data[1])
 
     def test_Zero_Has_Correct_Value(self):
         subtests = [
@@ -1244,7 +1244,7 @@ class InstructionINC(Processor):
 
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x03), data[1])
+                self.assertEqual(c.mmu.cpu_read(0x03), data[1])
 
     def test_Zero_Has_Correct_Value(self):
         subtests = [
@@ -1390,10 +1390,10 @@ class InstructionJMP(Processor):
 
     def test_Indirect_Wraps_Correct_If_MSB_IS_FF(self):
         c = self.create(program=[0x6C, 0xFF, 0x01, 0x08, 0x00])
-        c.mmu.write(0x01FE, 0x6C)
+        c.mmu.cpu_write(0x01FE, 0x6C)
         c.step()
-        c.mmu.write(0x01FF, 0x03)
-        c.mmu.write(0x0100, 0x02)
+        c.mmu.cpu_write(0x01FF, 0x03)
+        c.mmu.cpu_write(0x0100, 0x02)
         c.step()
 
         self.assertEqual(c.r.pc, 0x0203)
@@ -1409,11 +1409,11 @@ class InstructionJSR(Processor):
         c.step()
 
         self.assertEqual(
-            c.mmu.read(self.get_stack_location(stackLocation)),
+            c.mmu.cpu_read(self.get_stack_location(stackLocation)),
             0xBB
         )
         self.assertEqual(
-            c.mmu.read(self.get_stack_location(stackLocation - 1)),
+            c.mmu.cpu_read(self.get_stack_location(stackLocation - 1)),
             0xAC
         )
 
@@ -1646,7 +1646,7 @@ class InstructionLSR(Processor):
                 if data[0] == 0x4A:
                     self.assertEqual(c.r.a, data[2])
                 else:
-                    self.assertEqual(c.mmu.read(data[3]), data[2])
+                    self.assertEqual(c.mmu.cpu_read(data[3]), data[2])
 
 
 class InstructionORA(Processor):
@@ -1711,7 +1711,7 @@ class InstructionPHA(Processor):
 
         # Accounting for the Offset in memory
         self.assertEqual(
-            c.mmu.read(self.get_stack_location(stackLocation)),
+            c.mmu.cpu_read(self.get_stack_location(stackLocation)),
             0x03
         )
 
@@ -1754,7 +1754,7 @@ class InstructionPHP(Processor):
                 c.step()
 
                 self.assertEqual(
-                    c.mmu.read(self.get_stack_location(stackLocation)),
+                    c.mmu.cpu_read(self.get_stack_location(stackLocation)),
                     data[1]
                 )
 
@@ -1776,7 +1776,7 @@ class InstructionPHP(Processor):
                 c.step()
 
                 self.assertEqual(
-                    c.mmu.read(self.get_stack_location(stackLocation)),
+                    c.mmu.cpu_read(self.get_stack_location(stackLocation)),
                     data[2]
                 )
 
@@ -1967,7 +1967,7 @@ class InstructionROL(Processor):
                     self.assertEqual(c.r.a, data[2])
                 else:
                     self.assertEqual(
-                        c.mmu.read(data[3]),
+                        c.mmu.cpu_read(data[3]),
                         data[2]
                     )
 
@@ -2050,7 +2050,7 @@ class InstructionROR(Processor):
                     self.assertEqual(c.r.a, data[2])
                 else:
                     self.assertEqual(
-                        c.mmu.read(data[3]),
+                        c.mmu.cpu_read(data[3]),
                         data[2]
                     )
 
@@ -2063,7 +2063,7 @@ class InstructionRTI(Processor):
 
         # The Reset Vector Points to 0x0000 by default,
         # so load the RTI instruction there.
-        c.mmu.write(0x00, 0x40)
+        c.mmu.cpu_write(0x00, 0x40)
         self.assertEqual(c.r.pc, 0xABCD)
 
         c.step()
@@ -2145,7 +2145,7 @@ class InstructionRTS(Processor):
 
     def test_Stack_Pointer_Has_Correct_Value(self):
         c = self._cpu()
-        c.mmu.write(0xBBAA, 0x60)
+        c.mmu.cpu_write(0xBBAA, 0x60)
         c.r.pc = 0xBBAA
 
         stackLocation = c.r.s
@@ -2410,12 +2410,12 @@ class InstructionSTA(Processor):
     def test_Memory_Has_Correct_Value(self):
         c = self.create(program=[0xA9, 0x03, 0x85, 0x05])
 
-        self.assertEqual(c.mmu.read(0x05), 0x00)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x00)
 
         c.step()
         c.step()
 
-        self.assertEqual(c.mmu.read(0x05), 0x03)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x03)
 
 
 class InstructionSTX(Processor):
@@ -2424,12 +2424,12 @@ class InstructionSTX(Processor):
     def test_Memory_Has_Correct_Value(self):
         c = self.create(program=[0xA2, 0x03, 0x86, 0x05])
 
-        self.assertEqual(c.mmu.read(0x05), 0x00)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x00)
 
         c.step()
         c.step()
 
-        self.assertEqual(c.mmu.read(0x05), 0x03)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x03)
 
 
 class InstructionSTY(Processor):
@@ -2438,12 +2438,12 @@ class InstructionSTY(Processor):
     def test_Memory_Has_Correct_Value(self):
         c = self.create(program=[0xA0, 0x03, 0x84, 0x05])
 
-        self.assertEqual(c.mmu.read(0x05), 0x00)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x00)
 
         c.step()
         c.step()
 
-        self.assertEqual(c.mmu.read(0x05), 0x03)
+        self.assertEqual(c.mmu.cpu_read(0x05), 0x03)
 
 
 class InstructionTAX(Processor):
@@ -3008,7 +3008,7 @@ class DecrementIncrementAddress(Processor):
 
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x02), data[2])
+                self.assertEqual(c.mmu.cpu_read(0x02), data[2])
 
     def test_Absolute_DEC_INC_Has_Correct_Result(self):
         subtests = [
@@ -3023,7 +3023,7 @@ class DecrementIncrementAddress(Processor):
 
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x03), data[2])
+                self.assertEqual(c.mmu.cpu_read(0x03), data[2])
 
 
 class StoreInMemoryAddress(Processor):
@@ -3047,7 +3047,7 @@ class StoreInMemoryAddress(Processor):
                 c.step()
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x04), 0x05)
+                self.assertEqual(c.mmu.cpu_read(0x04), 0x05)
 
     def test_Absolute_Mode_Memory_Has_Correct_Result(self):
         subtests: list[tuple[int, int, RegisterMode]] = [
@@ -3066,7 +3066,7 @@ class StoreInMemoryAddress(Processor):
                 c.step()
                 c.step()
 
-                self.assertEqual(c.mmu.read(0x04), data[1])
+                self.assertEqual(c.mmu.cpu_read(0x04), data[1])
 
 
 class Cycle(Processor):

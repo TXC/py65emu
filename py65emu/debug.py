@@ -74,10 +74,10 @@ class Disassembly:
                 return prefix + f"(${self.hi:0>2x}{self.lo:0>2x}) "
             case "ix":
                 loc_addr = (self.lo + self.op.cpu.r.x) & 0xFFFF
-                addr = self.op.cpu.mmu.readWord(loc_addr) & 0xFFFF
+                addr = self.op.cpu.mmu.cpu_readWord(loc_addr) & 0xFFFF
                 return prefix + f"(${self.lo:0>2x}, X) [${addr:0>4x}]"
             case "iy":
-                loc_addr = self.op.cpu.mmu.readWord(self.lo) & 0xFFFF
+                loc_addr = self.op.cpu.mmu.cpu_readWord(self.lo) & 0xFFFF
                 addr = loc_addr + self.op.cpu.r.y
                 return prefix + f"(${self.lo:0>2x}), Y [${addr:0>4x}]"
             case _:  # Actually: self.op.mode == 'rel'
@@ -120,19 +120,19 @@ class Debug:
                  Disassembly object
         """
         addr_org = addr
-        opcode = self.cpu.mmu.read(addr)
+        opcode = self.cpu.mmu.cpu_read(addr)
         addr += 1
         hi = 0x00
         lo = 0x00
 
         op = self.cpu.opcodes[opcode]
         if op.bytes == 2:
-            lo = self.cpu.mmu.read(addr)
+            lo = self.cpu.mmu.cpu_read(addr)
             addr += 1
         elif op.bytes == 3:
-            lo = self.cpu.mmu.read(addr)
+            lo = self.cpu.mmu.cpu_read(addr)
             addr += 1
-            hi = self.cpu.mmu.read(addr)
+            hi = self.cpu.mmu.cpu_read(addr)
             addr += 1
 
         assembly = Disassembly(
@@ -168,7 +168,7 @@ class Debug:
 
             value = [offset,]
             for addr in range(0x10):
-                value += self.cpu.mmu.read(offset + addr),
+                value += self.cpu.mmu.cpu_read(offset + addr),
 
             memory.append(tuple(value))
         return memory
@@ -206,7 +206,7 @@ class Debug:
         """
         Static method to dump out backtrace of the program that was running
         """
-        entry = cpu.mmu.read(0xFFFD) + (cpu.mmu.read(0xFFFC) << 8)
+        entry = cpu.mmu.cpu_read(0xFFFD) + (cpu.mmu.cpu_read(0xFFFC) << 8)
 
         pc = cpu.r.pc - 20
         if pc < entry:

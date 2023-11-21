@@ -31,10 +31,11 @@ class KlausDormann(unittest.TestCase):
         self.c = CPU(MMU(mmu), pc)
 
         with open(path, "rb") as fp:
-            self.c.mmu.addBlock(pc, 0x10000 - pc, False, fp)
+            if isinstance(self.c.mmu, MMU):
+                self.c.mmu.addBlock(pc, 0x10000 - pc, False, fp)
 
-        self.c.mmu.write(0xFFFC, (pc >> 8) & 0xFF)
-        self.c.mmu.write(0xFFFD, pc & 0xFF)
+        self.c.mmu.cpu_write(0xFFFC, (pc >> 8) & 0xFF)
+        self.c.mmu.cpu_write(0xFFFD, pc & 0xFF)
 
         return self.c
 
@@ -71,43 +72,44 @@ class Decimal:
 
         # operands - register Y = carry in
         # 0x0000 1 byte
-        self.N1 = self.cpu.mmu.read(0x0000)
+        self.N1 = self.cpu.mmu.cpu_read(0x0000)
         # 0x0001 1 byte
-        self.N2 = self.cpu.mmu.read(0x0001)
+        self.N2 = self.cpu.mmu.cpu_read(0x0001)
         # binary result
         # 0x0002 1 byte
-        self.HA = self.cpu.mmu.read(0x0002)
+        self.HA = self.cpu.mmu.cpu_read(0x0002)
         # 0x0003 1 byte
-        self.HNVZC = self.cpu.mmu.read(0x0003)
+        self.HNVZC = self.cpu.mmu.cpu_read(0x0003)
         # decimal result
         # 0x0004 1 byte
-        self.DA = self.cpu.mmu.read(0x0004)
+        self.DA = self.cpu.mmu.cpu_read(0x0004)
         # 0x0005 1 byte
-        self.DNVZC = self.cpu.mmu.read(0x0005)
+        self.DNVZC = self.cpu.mmu.cpu_read(0x0005)
         # predicted results
         # 0x0006 1 byte
-        self.AR = self.cpu.mmu.read(0x0006)
+        self.AR = self.cpu.mmu.cpu_read(0x0006)
         # 0x0007 1 byte
-        self.NF = self.cpu.mmu.read(0x0007)
+        self.NF = self.cpu.mmu.cpu_read(0x0007)
 
         # 0x0008 1 byte
-        self.VF = self.cpu.mmu.read(0x0008)
+        self.VF = self.cpu.mmu.cpu_read(0x0008)
         # 0x0009 1 byte
-        self.ZF = self.cpu.mmu.read(0x0009)
+        self.ZF = self.cpu.mmu.cpu_read(0x0009)
         # 0x000a 1 byte
-        self.CF = self.cpu.mmu.read(0x000a)
+        self.CF = self.cpu.mmu.cpu_read(0x000a)
         # 0x000b 1 byte
-        self.ERROR = self.cpu.mmu.read(0x000b)
+        self.ERROR = self.cpu.mmu.cpu_read(0x000b)
         # workspace
         # 0x000c 1 byte
-        self.N1L = self.cpu.mmu.read(0x000c)
+        self.N1L = self.cpu.mmu.cpu_read(0x000c)
         # 0x000d 1 byte
-        self.N1H = self.cpu.mmu.read(0x000d)
+        self.N1H = self.cpu.mmu.cpu_read(0x000d)
         # 0x000e 1 byte
-        self.N2L = self.cpu.mmu.read(0x000e)
+        self.N2L = self.cpu.mmu.cpu_read(0x000e)
         # 0x000f 2 byte
         self.N2H = (
-            self.cpu.mmu.read(0x000f) | (self.cpu.mmu.read(0x0010) << 8)
+            self.cpu.mmu.cpu_read(0x000f) |
+            (self.cpu.mmu.cpu_read(0x0010) << 8)
         )
 
     def __eq__(self, other):
@@ -199,7 +201,7 @@ class KlausDormannDecimal(KlausDormann):
             if self.c.running is not True:
                 print("No. of cycles {}".format(total_no_of_cycles))
                 self.assertEqual(
-                    self.c.mmu.read(0x000b),
+                    self.c.mmu.cpu_read(0x000b),
                     0,
                     "Test reported error"
                 )
@@ -416,7 +418,7 @@ class KlausDormannInterrupt(KlausDormann):
         """
 
         while 1:
-            interrupt_watch = self.c.mmu.read(0xBFFC)
+            interrupt_watch = self.c.mmu.cpu_read(0xBFFC)
             # This is used to simulate the edge triggering of an NMI.
             # If we didn't do this we would get stuck in a loop forever
             if interrupt_watch != previous_interrupt_watch_value:

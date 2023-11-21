@@ -119,8 +119,8 @@ class NesTestRom(unittest.TestCase):
     def checkCycle(self, cycle: int) -> None:
         pc = "OP: {:0>4x}".format(self.c.r.pc)
 
-        legal_op_error = self.c.mmu.read(0x0002)
-        illegal_op_error = self.c.mmu.read(0x0003)
+        legal_op_error = self.c.mmu.cpu_read(0x0002)
+        illegal_op_error = self.c.mmu.cpu_read(0x0003)
 
         self.assertEqual(
             legal_op_error,

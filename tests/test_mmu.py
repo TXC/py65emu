@@ -62,41 +62,41 @@ class TestMMU(unittest.TestCase):
 
     def test_write(self):
         m = MMU([(0, 128)])
-        m.write(16, 25)
+        m.cpu_write(16, 25)
         self.assertEqual(m.blocks[0].get(16), 25)
 
     def test_write_multiple_blocks(self):
         m = MMU([(0, 128), (1024, 128)])
-        m.write(16, 25)
+        m.cpu_write(16, 25)
         self.assertEqual(m.blocks[0][16], 25)
-        m.write(1056, 55)
+        m.cpu_write(1056, 55)
         self.assertEqual(m.blocks[1][32], 55, m.blocks[1])
 
     def test_write_readonly(self):
         m = MMU([(0, 16, True), (16, 16), (32, 16, True)])
         with self.assertRaises(ReadOnlyError):
-            m.write(8, 1)
-        m.write(20, 1)
+            m.cpu_write(8, 1)
+        m.cpu_write(20, 1)
         with self.assertRaises(ReadOnlyError):
-            m.write(40, 1)
+            m.cpu_write(40, 1)
 
     def test_read(self):
         m = MMU([(0, 128)])
-        m.write(16, 5)
-        m.write(64, 111)
-        self.assertEqual(5, m.read(16))
-        self.assertEqual(111, m.read(64))
+        m.cpu_write(16, 5)
+        m.cpu_write(64, 111)
+        self.assertEqual(5, m.cpu_read(16))
+        self.assertEqual(111, m.cpu_read(64))
 
     def test_index_error(self):
         m = MMU([(0, 128)])
         with self.assertRaises(IndexError):
-            m.write(-1, 0)
+            m.cpu_write(-1, 0)
         with self.assertRaises(IndexError):
-            m.write(128, 0)
+            m.cpu_write(128, 0)
         with self.assertRaises(IndexError):
-            m.read(-1)
+            m.cpu_read(-1)
         with self.assertRaises(IndexError):
-            m.read(128)
+            m.cpu_read(128)
         with self.assertRaises(IndexError):
             b = m.getBlock(127)
             _ = b[256]
@@ -119,10 +119,10 @@ class TestMMU(unittest.TestCase):
     def test_reset(self):
         m = MMU([(0, 16, True), (16, 16, False)])
         m.blocks[0][0] = 5
-        m.write(16, 10)
+        m.cpu_write(16, 10)
         m.reset()
-        self.assertEqual(m.read(0), 5)
-        self.assertEqual(m.read(16), 0)
+        self.assertEqual(m.cpu_read(0), 5)
+        self.assertEqual(m.cpu_read(16), 0)
 
     def tearDown(self):
         pass

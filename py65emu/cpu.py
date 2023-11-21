@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import math
 from enum import Enum
-from py65emu.mmu import MMU
+from py65emu.mmu import Memory
 from py65emu.operation import Operation, OpCodes
 from py65emu.debug import Disassembly
 
@@ -298,8 +298,8 @@ class CPU:
     running: bool
     """CPU is running"""
 
-    mmu: MMU
-    """MMU"""
+    mmu: Memory
+    """Memory"""
 
     op: Operation | None = None
     """Current Operation"""
@@ -324,7 +324,7 @@ class CPU:
 
     def __init__(
         self,
-        mmu: MMU,
+        mmu: Memory,
         pc: int | None = None,
         stack_page: int = 0x1,
         magic: int = 0xEE,
@@ -334,7 +334,7 @@ class CPU:
         """
         Initialize CPU
 
-        :param mmu: An instance of MMU
+        :param mmu: An instance of Memory
         :param pc: The starting address of the pc (program counter)
         :param stack_page: The index of the page which contains the stack. The
                            default for a 6502 is page 1 (the stack from
@@ -343,12 +343,12 @@ class CPU:
         :param magic: A value needed for the illegal opcodes, XAA. This value
                       differs between different versions, even of the same
                       CPU. The default is 0xee
-        :type mmu: MMU | None
+        :type mmu: Memory | None
         :type pc: int | None
         :type stack_page: int
         :type magic: int
         """
-        self.mmu: MMU = mmu
+        self.mmu: Memory = mmu
 
         self.r: Registers = Registers()
         self.bcd_disabled = disable_bcd
@@ -384,7 +384,7 @@ class CPU:
         self.op = None
 
     def reset(self) -> None:
-        """Reset everything (CPU, MMU, ...)"""
+        """Reset everything (CPU, Memory, ...)"""
         self.r.reset(self.interrupts["RESET"])
         self.mmu.reset()
         self.trigger_nmi = False
@@ -459,19 +459,19 @@ class CPU:
 
     def readByte(self, addr: int) -> int:
         """
-        Read byte from MMU
+        Read byte from Memory
 
         :param int addr: 16 bit memory address
         :rtype: int
         :return: 8 bit (1 byte)
         """
-        v = self.mmu.read(addr)
+        v = self.mmu.cpu_read(addr)
         self.increment_cycle_count()
         return v
 
     def readWord(self, addr: int) -> int:
         """
-        Read 2 bytes (word) from MMU
+        Read 2 bytes (word) from Memory
 
         :param int addr: 16 bit memory address
         :rtype: int
@@ -483,27 +483,27 @@ class CPU:
 
     def writeByte(self, addr: int, value: int) -> None:
         """
-        Write byte to MMU
+        Write byte to Memory
 
         :param int addr: 16 bit memory address
         :param int value: 8 bit value
         :rtype: None
         :return: None
         """
-        self.mmu.write(addr, value)
+        self.mmu.cpu_write(addr, value)
         self.increment_cycle_count()
 
     def writeWord(self, addr: int, value: int) -> None:
         """
-        Write 2 bytes (word) to MMU
+        Write 2 bytes (word) to Memory
 
         :param int addr: 16 bit memory address
         :param int value: 16 bit value
         :rtype: None
         :return: None
         """
-        self.writeByte(addr, value & 0x00FF)
         self.writeByte(addr, (value >> 8) & 0x00FF)
+        self.writeByte(addr + 1, value & 0x00FF)
 
     def nextByte(self) -> int:
         """
@@ -645,7 +645,10 @@ class CPU:
         :param str irq_type: Interrupt type, key
                              from :py:attr:`.interrupts`
         """
-        return self.mmu.readWord(self.interrupts[irq_type])
+        addr = self.interrupts[irq_type]
+        return (
+            (self.mmu.cpu_read(addr + 1) << 8) + self.mmu.cpu_read(addr)
+        )
 
     def interruptRequest(self) -> None:
         """Trigger interrupt on next operation"""
@@ -2080,7 +2083,7 @@ class CPU:
         :param int a: 16 bit address
         """
         self.DEC(a)
-        self.CMP(self.mmu.read(a))
+        self.CMP(self.mmu.cpu_read(a))
 
     def ISC(self, a: int) -> None:  # ISB, INS
         """
@@ -2101,7 +2104,7 @@ class CPU:
         :param int a: 16 bit address
         """
         self.INC(a)
-        self.SBC(self.mmu.read(a))
+        self.SBC(self.mmu.cpu_read(a))
 
     def KIL(self, _) -> None:  # JAM, HLT
         """
@@ -2173,7 +2176,7 @@ class CPU:
         :param int a: 16 bit address
         """
         self.ROL(a)
-        self.AND(self.mmu.read(a))
+        self.AND(self.mmu.cpu_read(a))
 
     def RRA(self, a: int) -> None:
         """
@@ -2193,7 +2196,7 @@ class CPU:
         """
 
         self.ROR(a)
-        self.ADC(self.mmu.read(a))
+        self.ADC(self.mmu.cpu_read(a))
 
     def SLO(self, a: int) -> None:  # ASO
         """
@@ -2214,7 +2217,7 @@ class CPU:
         :param int a: 16 bit address
         """
         self.ASL(a)
-        self.ORA(self.mmu.read(a))
+        self.ORA(self.mmu.cpu_read(a))
 
     def SRE(self, a: int) -> None:  # LSE
         """
@@ -2235,7 +2238,7 @@ class CPU:
         :param int a: 16 bit address
         """
         self.LSR(a)
-        self.EOR(self.mmu.read(a))
+        self.EOR(self.mmu.cpu_read(a))
 
     def SXA(self, a: int) -> None:  # SHX, XAS
         """

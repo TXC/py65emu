@@ -94,10 +94,10 @@ class Operation:
         hi = 0x00
         lo = 0x00
         if self.bytes == 2:
-            lo = self.cpu.mmu.read(addr + 1)
+            lo = self.cpu.mmu.cpu_read(addr + 1)
         elif self.bytes == 3:
-            lo = self.cpu.mmu.read(addr + 1)
-            hi = self.cpu.mmu.read(addr + 2)
+            lo = self.cpu.mmu.cpu_read(addr + 1)
+            hi = self.cpu.mmu.cpu_read(addr + 2)
 
         return (addr, hi, lo)
 
